@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"tasklight/internal/cli"
+	"github.com/revazi/tasklight/internal/cli"
 )
 
 func main() {

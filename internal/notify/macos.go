@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	brandassets "tasklight/assets/brand"
+	brandassets "github.com/revazi/tasklight/assets/brand"
 )
 
 const displayNotificationScript = `on run argv

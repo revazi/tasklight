@@ -4,6 +4,11 @@
   <img src="assets/brand/tasklight-repo-banner-1600x640.png" alt="Tasklight" width="800">
 </p>
 
+<p align="center">
+  <a href="https://github.com/revazi/tasklight/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/revazi/tasklight/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
+</p>
+
 Tasklight is a small CLI for running long developer tasks and getting notified when they finish.
 
 It is meant for commands you start and then forget to check:
@@ -61,42 +66,78 @@ Planned:
 - config files
 - packaging/release builds
 
-## Quick start
+## Installation
 
-Build locally:
+Install with Go:
 
 ```bash
+go install github.com/revazi/tasklight/cmd/tasklight@latest
+```
+
+Or build from source:
+
+```bash
+git clone https://github.com/revazi/tasklight.git
+cd tasklight
 go build -o bin/tasklight ./cmd/tasklight
 ```
+
+Optional macOS enhancement for custom sender icon and click-to-focus:
+
+```bash
+brew install terminal-notifier
+```
+
+Linux desktop notifications require `notify-send`:
+
+```bash
+# Ubuntu/Debian
+sudo apt install libnotify-bin
+
+# Fedora
+sudo dnf install libnotify
+
+# Arch
+sudo pacman -S libnotify
+```
+
+Check your setup:
+
+```bash
+tasklight --version
+tasklight doctor
+```
+
+## Quick start
 
 Run a command:
 
 ```bash
-./bin/tasklight run -- pnpm test
+tasklight run -- pnpm test
 ```
 
 Run a named task:
 
 ```bash
-./bin/tasklight run --name "Frontend tests" -- pnpm test
+tasklight run --name "Frontend tests" -- pnpm test
 ```
 
 Run from another directory:
 
 ```bash
-./bin/tasklight run --cwd frontend -- pnpm build
+tasklight run --cwd frontend -- pnpm build
 ```
 
 Send a direct notification:
 
 ```bash
-./bin/tasklight notify --subtitle "✅ Pi is ready" --message "Fixed failing auth test setup."
+tasklight notify --subtitle "✅ Pi is ready" --message "Fixed failing auth test setup."
 ```
 
 Check exit-code preservation:
 
 ```bash
-./bin/tasklight run -- sh -c 'exit 42'
+tasklight run -- sh -c 'exit 42'
 echo $?
 # 42
 ```
@@ -107,46 +148,43 @@ The `--` separator is required. Everything after `--` is treated as the command 
 
 ```bash
 # JavaScript/TypeScript tests
-./bin/tasklight run --name "JS tests" -- pnpm test
+tasklight run --name "JS tests" -- pnpm test
 
 # Python tests
-./bin/tasklight run --name "Pytest" -- pytest
+tasklight run --name "Pytest" -- pytest
 
 # Django tests
-./bin/tasklight run --cwd backend --name "Django tests" -- python manage.py test
+tasklight run --cwd backend --name "Django tests" -- python manage.py test
 
 # Docker command
-./bin/tasklight run --name "Docker build" -- docker build .
+tasklight run --name "Docker build" -- docker build .
 
 # Coding-agent task
-./bin/tasklight run --name "Pi task" -- pi "fix this failing test"
+tasklight run --name "Pi task" -- pi "fix this failing test"
 
 # Direct notification from a script or integration
-./bin/tasklight notify --title "Pi" --subtitle "✅ Task finished" --message "Updated tests and mocks."
+tasklight notify --title "Pi" --subtitle "✅ Task finished" --message "Updated tests and mocks."
 ```
 
 ## Pi integration
 
-The Pi integration lives in a separate package/repository: `pi-tasklight`.
+The Pi integration lives in a separate repository: `pi-tasklight`.
 
-It adds a Pi slash command:
+Planned public repo:
+
+```text
+https://github.com/revazi/pi-tasklight
+```
+
+That repository is private for now. It will be made public after Tasklight itself is public and after there is an installable Tasklight CLI package that `pi-tasklight` can depend on.
+
+`pi-tasklight` adds a Pi slash command:
 
 ```text
 /tl fix the failing auth test
 ```
 
 When the Pi task finishes, the extension sends a Tasklight notification with a short summary. It does not make a second summarization model call; instead, it adds a small per-turn instruction asking Pi to include a short notification summary marker, then strips that marker from the saved/displayed assistant message.
-
-Local development with sibling repositories:
-
-```bash
-# in ~/Work/tasklight
-go build -o bin/tasklight ./cmd/tasklight
-
-# in ~/Work/pi-tasklight
-export TASKLIGHT_BIN="$HOME/Work/tasklight/bin/tasklight"
-pi -e ./extensions/tasklight.ts
-```
 
 Inside Pi:
 
@@ -159,20 +197,22 @@ Inside Pi:
 /tl-test
 ```
 
-Install the local Pi package:
+Future install target:
 
 ```bash
-pi install ~/Work/pi-tasklight
+pi install git:github.com/revazi/pi-tasklight
+# later, once published to npm:
+pi install npm:@tasklight/pi-tasklight
 ```
 
-See the `pi-tasklight` repository README for details.
+The future npm package should depend on an installable Tasklight CLI package, so Pi users do not need to manually build or install Tasklight first.
 
 ## Doctor
 
 Check local notification/focus provider setup:
 
 ```bash
-./bin/tasklight doctor
+tasklight doctor
 ```
 
 Inside Pi with `pi-tasklight` loaded:
@@ -206,10 +246,10 @@ When `terminal-notifier` is available, Tasklight creates and registers a tiny lo
 Then you can ask Tasklight to focus an app when the notification is clicked:
 
 ```bash
-./bin/tasklight run --activate-app Terminal -- pnpm test
-./bin/tasklight run --activate-app iTerm2 -- pnpm test
-./bin/tasklight run --activate-app "Visual Studio Code" -- pnpm test
-./bin/tasklight run --activate-app Cursor -- pnpm test
+tasklight run --activate-app Terminal -- pnpm test
+tasklight run --activate-app iTerm2 -- pnpm test
+tasklight run --activate-app "Visual Studio Code" -- pnpm test
+tasklight run --activate-app Cursor -- pnpm test
 ```
 
 Click-to-focus is best effort. macOS notification click handling is limited without a native helper app, so this behavior may vary by terminal and macOS settings.
@@ -238,6 +278,7 @@ Linux currently supports basic finish/failure notifications. Tasklight passes th
 ## CLI reference
 
 ```bash
+tasklight --version
 tasklight run [options] -- <command> [args...]
 tasklight notify [options]
 tasklight doctor
@@ -310,7 +351,6 @@ Near-term:
 - `--idle 5m` to notify when a task stops producing output
 - `--match "text"` to notify when output needs attention
 - improved notification provider selection
-- `tasklight doctor`
 
 Later:
 

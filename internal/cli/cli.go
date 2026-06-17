@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"tasklight/internal/doctor"
-	"tasklight/internal/notify"
-	"tasklight/internal/runner"
-	"tasklight/internal/session"
+	"github.com/revazi/tasklight/internal/doctor"
+	"github.com/revazi/tasklight/internal/notify"
+	"github.com/revazi/tasklight/internal/runner"
+	"github.com/revazi/tasklight/internal/session"
 )
 
 type runOptions struct {
@@ -30,6 +30,8 @@ type notifyOptions struct {
 	sound       bool
 }
 
+var Version = "dev"
+
 var detectFocusTarget = session.Detect
 
 func Execute(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
@@ -45,6 +47,9 @@ func ExecuteWithNotifier(args []string, stdin io.Reader, stdout io.Writer, stder
 	switch args[0] {
 	case "-h", "--help", "help":
 		printRootHelp(stdout)
+		return 0
+	case "-v", "--version", "version":
+		fmt.Fprintf(stdout, "tasklight %s\n", Version)
 		return 0
 	case "run":
 		return executeRun(args[1:], stdin, stdout, stderr, notifier)
@@ -288,6 +293,7 @@ Commands:
   run       Run a command and preserve output, stdin, and exit code
   notify    Send a Tasklight desktop notification
   doctor    Check notification/focus provider availability
+  version   Show version
   help      Show this help
 
 Examples:

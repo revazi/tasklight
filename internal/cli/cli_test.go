@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"tasklight/internal/notify"
-	"tasklight/internal/session"
+	"github.com/revazi/tasklight/internal/notify"
+	"github.com/revazi/tasklight/internal/session"
 )
 
 func TestMain(m *testing.M) {
@@ -17,6 +17,27 @@ func TestMain(m *testing.M) {
 		return session.FocusTarget{}
 	}
 	os.Exit(m.Run())
+}
+
+func TestExecuteVersion(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	oldVersion := Version
+	Version = "test-version"
+	t.Cleanup(func() { Version = oldVersion })
+
+	code := ExecuteWithNotifier([]string{"--version"}, strings.NewReader(""), &stdout, &stderr, &recordingNotifier{})
+
+	if code != 0 {
+		t.Fatalf("code = %d, want 0", code)
+	}
+	if got := stdout.String(); got != "tasklight test-version\n" {
+		t.Fatalf("stdout = %q, want version", got)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
 }
 
 func TestExecuteRunSuccess(t *testing.T) {

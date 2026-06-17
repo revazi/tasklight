@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	brandassets "tasklight/assets/brand"
+	brandassets "github.com/revazi/tasklight/assets/brand"
 )
 
 const tasklightSenderBundleID = "dev.tasklight.Tasklight"

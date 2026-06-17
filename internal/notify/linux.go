@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	brandassets "tasklight/assets/brand"
+	brandassets "github.com/revazi/tasklight/assets/brand"
 )
 
 type linuxCommandRunner func(name string, args ...string) error

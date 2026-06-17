@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: go test ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build -o bin/tasklight ./cmd/tasklight
+
+      - name: Cross-compile smoke checks
+        run: |
+          GOOS=darwin GOARCH=arm64 go build -o /tmp/tasklight-darwin-arm64 ./cmd/tasklight
+          GOOS=darwin GOARCH=amd64 go build -o /tmp/tasklight-darwin-amd64 ./cmd/tasklight
+          GOOS=linux GOARCH=arm64 go build -o /tmp/tasklight-linux-arm64 ./cmd/tasklight
+          GOOS=linux GOARCH=amd64 go build -o /tmp/tasklight-linux-amd64 ./cmd/tasklight
