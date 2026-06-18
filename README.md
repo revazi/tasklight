@@ -68,6 +68,18 @@ Planned:
 
 ## Installation
 
+Install with npm:
+
+```bash
+npm install -g @tasklight/cli
+```
+
+Or run without installing globally:
+
+```bash
+npx -y @tasklight/cli doctor
+```
+
 Install with Go:
 
 ```bash
@@ -342,6 +354,14 @@ Cross-compile check for Linux:
 
 ```bash
 GOOS=linux GOARCH=arm64 go build ./...
+```
+
+Build the local npm CLI package:
+
+```bash
+npm --prefix npm/tasklight-cli run build:vendor
+npm --prefix npm/tasklight-cli run test:local
+npm --prefix npm/tasklight-cli run pack:check
 ```
 
 ## Roadmap

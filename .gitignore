@@ -1,7 +1,9 @@
-bin/
+/bin/
 /tasklight
 *.test
 .DS_Store
 coverage.out
 tasklight_brand_assets/
 tasklight_brand_assets.zip
+npm/tasklight-cli/vendor/
+npm/tasklight-cli/*.tgz
