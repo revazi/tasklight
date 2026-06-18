@@ -5,6 +5,8 @@
 </p>
 
 <p align="center">
+  <a href="https://www.npmjs.com/package/@tasklight/cli"><img alt="npm version" src="https://img.shields.io/npm/v/%40tasklight%2Fcli.svg"></a>
+  <a href="https://www.npmjs.com/package/@tasklight/cli"><img alt="npm downloads" src="https://img.shields.io/npm/dm/%40tasklight%2Fcli.svg"></a>
   <a href="https://github.com/revazi/tasklight/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/revazi/tasklight/actions/workflows/ci.yml/badge.svg"></a>
   <a href="./LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue.svg"></a>
 </p>
@@ -67,6 +69,18 @@ Planned:
 - packaging/release builds
 
 ## Installation
+
+Install with npm:
+
+```bash
+npm install -g @tasklight/cli
+```
+
+Or run without installing globally:
+
+```bash
+npx -y @tasklight/cli doctor
+```
 
 Install with Go:
 
@@ -166,9 +180,9 @@ tasklight run --name "Pi task" -- pi "fix this failing test"
 tasklight notify --title "Pi" --subtitle "✅ Task finished" --message "Updated tests and mocks."
 ```
 
-## Pi integration
+## Pi integration — coming soon
 
-The Pi integration lives in a separate repository: `pi-tasklight`.
+A separate Pi integration package, `pi-tasklight`, is planned but not public yet.
 
 Planned public repo:
 
@@ -176,7 +190,7 @@ Planned public repo:
 https://github.com/revazi/pi-tasklight
 ```
 
-That repository is private for now. It will be made public after Tasklight itself is public and after there is an installable Tasklight CLI package that `pi-tasklight` can depend on.
+That repository is private for now. It will be made public after the integration is ready for users.
 
 `pi-tasklight` adds a Pi slash command:
 
@@ -342,6 +356,14 @@ Cross-compile check for Linux:
 
 ```bash
 GOOS=linux GOARCH=arm64 go build ./...
+```
+
+Build the local npm CLI package:
+
+```bash
+npm --prefix npm/tasklight-cli run build:vendor
+npm --prefix npm/tasklight-cli run test:local
+npm --prefix npm/tasklight-cli run pack:check
 ```
 
 ## Roadmap
