@@ -247,15 +247,19 @@ Tasklight bundles the app icon from `assets/brand/tasklight-app-icon-1024.png` a
 
 The built-in `osascript` fallback does not support custom icons, so Tasklight does not pass an icon there and does not show an image placeholder.
 
-For proper macOS notification identity, custom icons, and better click behavior today, install `terminal-notifier`:
+For proper macOS notification identity, custom icons, and reliable click behavior, the npm package bundles a tiny native `Tasklight.app` notification helper. Source builds can create it with:
+
+```bash
+make macos-helper
+```
+
+If the native helper is unavailable, Tasklight can use `terminal-notifier` as an optional fallback:
 
 ```bash
 brew install terminal-notifier
 ```
 
-Tasklight does not auto-install `terminal-notifier`. It is an optional external provider: without it, Tasklight falls back to `osascript`.
-
-When `terminal-notifier` is available, Tasklight creates and registers a tiny local `Tasklight.app` helper under `~/Library/Application Support/Tasklight/`. Tasklight passes that bundle ID as the notification sender, so the left-side notification icon is Tasklight rather than `terminal-notifier`.
+Tasklight does not auto-install `terminal-notifier`. Without the native helper or `terminal-notifier`, Tasklight falls back to `osascript`.
 
 Then you can ask Tasklight to focus an app when the notification is clicked:
 
@@ -266,7 +270,7 @@ tasklight run --activate-app "Visual Studio Code" -- pnpm test
 tasklight run --activate-app Cursor -- pnpm test
 ```
 
-Click-to-focus is best effort. macOS notification click handling is limited without a native helper app, so this behavior may vary by terminal and macOS settings.
+Click-to-focus is currently optimized for iTerm2 + tmux. Other terminals/editors use best-effort app activation until deeper support is added.
 
 When running inside tmux, Tasklight also records the current pane and attempts to select it when the notification is clicked.
 
@@ -361,6 +365,7 @@ GOOS=linux GOARCH=arm64 go build ./...
 Build the local npm CLI package:
 
 ```bash
+make macos-helper
 npm --prefix npm/tasklight-cli run build:vendor
 npm --prefix npm/tasklight-cli run test:local
 npm --prefix npm/tasklight-cli run pack:check
@@ -379,5 +384,5 @@ Later:
 - config file support
 - richer tmux integration
 - better Linux focus support
-- native macOS notification helper so Tasklight no longer depends on `terminal-notifier` for icons/click actions
+- continue improving the native macOS notification helper and iTerm2/tmux focus path
 - Homebrew formula and release binaries

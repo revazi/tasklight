@@ -22,13 +22,20 @@ func TestNormalizeActivateApp(t *testing.T) {
 	}
 }
 
-func TestFocusTargetClickCommandIncludesTmuxAndActivateApp(t *testing.T) {
+func TestFocusTargetClickCommandIncludesTmuxSwitchClientAndItermFocus(t *testing.T) {
 	target := FocusTarget{
-		ActivateApp: "com.apple.Terminal",
+		ActivateApp: "com.googlecode.iterm2",
+		Terminal: TerminalTarget{
+			ITermSessionID: "59571519-5F27-46C1-95C1-2A6E9A2286F0",
+			ClientTTY:      "/dev/ttys000",
+		},
 		Tmux: &TmuxTarget{
-			Socket:   "/tmp/tmux-501/default",
-			WindowID: "@10",
-			PaneID:   "%55",
+			Socket:     "/tmp/tmux-501/default",
+			ClientName: "/dev/ttys000",
+			ClientTTY:  "/dev/ttys000",
+			Session:    "project",
+			WindowID:   "@10",
+			PaneID:     "%55",
 		},
 	}
 
@@ -37,12 +44,43 @@ func TestFocusTargetClickCommandIncludesTmuxAndActivateApp(t *testing.T) {
 	wantParts := []string{
 		"tmux",
 		"'-S' '/tmp/tmux-501/default'",
+		"'switch-client' '-c' '/dev/ttys000' '-t' 'project'",
 		"'select-window' '-t' '@10'",
 		"'select-pane' '-t' '%55'",
 		"osascript",
-		`'tell application id "com.apple.Terminal" to activate'`,
+		"com.googlecode.iterm2",
+		"59571519-5F27-46C1-95C1-2A6E9A2286F0",
+		"/dev/ttys000",
+		"select aWindow",
+		"select aTab",
+		"select aSession",
 	}
 	for _, want := range wantParts {
+		if !strings.Contains(command, want) {
+			t.Fatalf("ClickCommand() = %q, want to contain %q", command, want)
+		}
+	}
+}
+
+func TestFocusTargetClickCommandFallsBackToOpenForTerminal(t *testing.T) {
+	target := FocusTarget{ActivateApp: "com.apple.Terminal"}
+
+	command := target.ClickCommand()
+
+	if !strings.Contains(command, "'open' '-b' 'com.apple.Terminal'") {
+		t.Fatalf("ClickCommand() = %q, want open fallback", command)
+	}
+}
+
+func TestTerminalFocusCommandUsesClientTTY(t *testing.T) {
+	target := FocusTarget{
+		ActivateApp: "com.apple.Terminal",
+		Terminal:    TerminalTarget{ClientTTY: "/dev/ttys123"},
+	}
+
+	command := target.ClickCommand()
+
+	for _, want := range []string{"com.apple.Terminal", "/dev/ttys123", "set selected of aTab to true", "set index of aWindow to 1"} {
 		if !strings.Contains(command, want) {
 			t.Fatalf("ClickCommand() = %q, want to contain %q", command, want)
 		}
@@ -69,5 +107,14 @@ func TestParseTmuxSocket(t *testing.T) {
 
 	if got := parseTmuxSocket(input); got != want {
 		t.Fatalf("parseTmuxSocket(%q) = %q, want %q", input, got, want)
+	}
+}
+
+func TestNormalizeITermSessionID(t *testing.T) {
+	input := "w0t0p0:59571519-5F27-46C1-95C1-2A6E9A2286F0"
+	want := "59571519-5F27-46C1-95C1-2A6E9A2286F0"
+
+	if got := normalizeITermSessionID(input); got != want {
+		t.Fatalf("normalizeITermSessionID(%q) = %q, want %q", input, got, want)
 	}
 }

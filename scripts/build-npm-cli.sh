@@ -16,6 +16,10 @@ build_target() {
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" \
     go build -ldflags "$LDFLAGS" -o "$PKG/vendor/$dir/tasklight" "$ROOT/cmd/tasklight"
   chmod +x "$PKG/vendor/$dir/tasklight"
+
+  if [[ "$goos" == "darwin" ]] && command -v xcrun >/dev/null 2>&1; then
+    "$ROOT/scripts/build-macos-helper.sh" "$PKG/vendor/$dir" "$dir" >/dev/null
+  fi
 }
 
 build_target darwin arm64 darwin-arm64

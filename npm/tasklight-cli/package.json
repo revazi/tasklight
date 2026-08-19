@@ -1,6 +1,6 @@
 {
   "name": "@tasklight/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Tasklight CLI: get notified when long-running developer tasks finish, fail, or need attention.",
   "license": "MIT",
   "author": "Revaz Zakalashvili",

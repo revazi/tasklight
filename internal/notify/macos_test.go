@@ -8,11 +8,55 @@ import (
 	"testing"
 )
 
+func TestMacOSNotifierUsesNativeHelperWhenAvailable(t *testing.T) {
+	var gotName string
+	var gotArgs []string
+
+	notifier := MacOSNotifier{
+		nativeHelperPath: func() string { return "/Applications/Tasklight.app" },
+		start: func(name string, args ...string) error {
+			gotName = name
+			gotArgs = append([]string(nil), args...)
+			return nil
+		},
+		run: func(string, ...string) error {
+			t.Fatal("terminal-notifier fallback should not run when native helper exists")
+			return nil
+		},
+	}
+
+	notification := Notification{
+		Title:        "Custom Title",
+		Subtitle:     "subtitle",
+		Message:      "message",
+		ClickCommand: "echo clicked",
+		Sound:        true,
+	}
+
+	if err := notifier.Notify(notification); err != nil {
+		t.Fatalf("Notify() error = %v, want nil", err)
+	}
+
+	if gotName != "open" {
+		t.Fatalf("command name = %q, want open", gotName)
+	}
+	assertContainsArg(t, gotArgs, "-n")
+	assertContainsArg(t, gotArgs, "/Applications/Tasklight.app")
+	assertContainsArg(t, gotArgs, "--args")
+	assertContainsArg(t, gotArgs, "notify")
+	assertContainsArgPair(t, gotArgs, "--title", notification.Title)
+	assertContainsArgPair(t, gotArgs, "--subtitle", notification.Subtitle)
+	assertContainsArgPair(t, gotArgs, "--message", notification.Message)
+	assertContainsArgPair(t, gotArgs, "--click-command", notification.ClickCommand)
+	assertContainsArg(t, gotArgs, "--sound")
+}
+
 func TestMacOSNotifierUsesTerminalNotifierWhenAvailable(t *testing.T) {
 	var gotName string
 	var gotArgs []string
 
 	notifier := MacOSNotifier{
+		nativeHelperPath: func() string { return "" },
 		lookPath: func(file string) (string, error) {
 			if file != "terminal-notifier" {
 				t.Fatalf("lookPath(%q), want terminal-notifier", file)
@@ -47,9 +91,9 @@ func TestMacOSNotifierUsesTerminalNotifierWhenAvailable(t *testing.T) {
 	assertContainsArgPair(t, gotArgs, "-title", notification.Title)
 	assertContainsArgPair(t, gotArgs, "-subtitle", notification.Subtitle)
 	assertContainsArgPair(t, gotArgs, "-message", notification.Message)
-	assertContainsArgPair(t, gotArgs, "-activate", notification.ActivateApp)
-	assertContainsArgPair(t, gotArgs, "-sender", "dev.tasklight.Tasklight")
-	assertNotContainsArg(t, gotArgs, "-appIcon")
+	assertNotContainsArg(t, gotArgs, "-activate")
+	assertNotContainsArg(t, gotArgs, "-sender")
+	assertContainsArgPair(t, gotArgs, "-appIcon", "file:///tmp/tasklight-icon.png")
 	assertContainsArgPair(t, gotArgs, "-execute", notification.ClickCommand)
 	assertContainsArgPair(t, gotArgs, "-sound", "default")
 }
@@ -58,7 +102,8 @@ func TestMacOSNotifierUsesClickMessageForEmptyTerminalNotifierMessage(t *testing
 	var gotArgs []string
 
 	notifier := MacOSNotifier{
-		lookPath: func(string) (string, error) { return "terminal-notifier", nil },
+		nativeHelperPath: func() string { return "" },
+		lookPath:         func(string) (string, error) { return "terminal-notifier", nil },
 		run: func(_ string, args ...string) error {
 			gotArgs = append([]string(nil), args...)
 			return nil
@@ -73,11 +118,55 @@ func TestMacOSNotifierUsesClickMessageForEmptyTerminalNotifierMessage(t *testing
 	assertContainsArgPair(t, gotArgs, "-message", "Click to return")
 }
 
+func TestMacOSNotifierUsesSenderWhenNoClickCommand(t *testing.T) {
+	var gotArgs []string
+
+	notifier := MacOSNotifier{
+		nativeHelperPath: func() string { return "" },
+		lookPath:         func(string) (string, error) { return "terminal-notifier", nil },
+		run: func(_ string, args ...string) error {
+			gotArgs = append([]string(nil), args...)
+			return nil
+		},
+		senderBundleID: func() string { return "dev.tasklight.Tasklight" },
+	}
+
+	if err := notifier.Notify(Notification{Message: "hello"}); err != nil {
+		t.Fatalf("Notify() error = %v, want nil", err)
+	}
+
+	assertContainsArgPair(t, gotArgs, "-sender", "dev.tasklight.Tasklight")
+	assertNotContainsArg(t, gotArgs, "-execute")
+	assertNotContainsArg(t, gotArgs, "-appIcon")
+}
+
+func TestMacOSNotifierUsesActivateWhenNoClickCommand(t *testing.T) {
+	var gotArgs []string
+
+	notifier := MacOSNotifier{
+		nativeHelperPath: func() string { return "" },
+		lookPath:         func(string) (string, error) { return "terminal-notifier", nil },
+		run: func(_ string, args ...string) error {
+			gotArgs = append([]string(nil), args...)
+			return nil
+		},
+		senderBundleID: func() string { return "dev.tasklight.Tasklight" },
+	}
+
+	if err := notifier.Notify(Notification{Message: "hello", ActivateApp: "com.apple.Terminal"}); err != nil {
+		t.Fatalf("Notify() error = %v, want nil", err)
+	}
+
+	assertContainsArgPair(t, gotArgs, "-activate", "com.apple.Terminal")
+	assertNotContainsArg(t, gotArgs, "-execute")
+}
+
 func TestMacOSNotifierUsesAppIconWhenNoSenderBundleID(t *testing.T) {
 	var gotArgs []string
 
 	notifier := MacOSNotifier{
-		lookPath: func(string) (string, error) { return "terminal-notifier", nil },
+		nativeHelperPath: func() string { return "" },
+		lookPath:         func(string) (string, error) { return "terminal-notifier", nil },
 		run: func(_ string, args ...string) error {
 			gotArgs = append([]string(nil), args...)
 			return nil
@@ -97,7 +186,8 @@ func TestMacOSNotifierFallsBackToAppleScript(t *testing.T) {
 	var gotArgs []string
 
 	notifier := MacOSNotifier{
-		lookPath: func(string) (string, error) { return "", errors.New("not found") },
+		nativeHelperPath: func() string { return "" },
+		lookPath:         func(string) (string, error) { return "", errors.New("not found") },
 		run: func(name string, args ...string) error {
 			gotName = name
 			gotArgs = append([]string(nil), args...)
@@ -145,7 +235,8 @@ func TestMacOSNotifierDefaultsTitle(t *testing.T) {
 	var gotArgs []string
 
 	notifier := MacOSNotifier{
-		lookPath: func(string) (string, error) { return "", errors.New("not found") },
+		nativeHelperPath: func() string { return "" },
+		lookPath:         func(string) (string, error) { return "", errors.New("not found") },
 		run: func(_ string, args ...string) error {
 			gotArgs = append([]string(nil), args...)
 			return nil
@@ -169,6 +260,16 @@ func assertContainsArgPair(t *testing.T, args []string, flag string, value strin
 		}
 	}
 	t.Fatalf("args %#v do not contain %s %q", args, flag, value)
+}
+
+func assertContainsArg(t *testing.T, args []string, value string) {
+	t.Helper()
+	for _, arg := range args {
+		if arg == value {
+			return
+		}
+	}
+	t.Fatalf("args %#v do not contain %q", args, value)
 }
 
 func assertNotContainsArg(t *testing.T, args []string, value string) {
