@@ -1,0 +1,19 @@
+* text=auto eol=lf
+
+*.go text eol=lf
+*.swift text eol=lf
+*.sh text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.icns binary
+*.zip binary
+*.tgz binary

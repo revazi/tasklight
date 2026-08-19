@@ -9,16 +9,24 @@ Tasklight is early-stage. The main priority is keeping the CLI small, predictabl
 Requirements:
 
 - Go 1.19 or newer
+- Node.js 18 or newer for npm package checks
 - macOS or Linux
 
 Common checks:
 
 ```bash
-go test ./...
-go vet ./...
-go build -o bin/tasklight ./cmd/tasklight
+make check
 ./bin/tasklight doctor
 ```
+
+Package checks:
+
+```bash
+make npm-package
+make package-smoke
+```
+
+`make npm-package` should be run on macOS for publish-ready artifacts because the npm package includes the native macOS notification helper.
 
 ## Guidelines
 
@@ -34,9 +42,7 @@ go build -o bin/tasklight ./cmd/tasklight
 Run:
 
 ```bash
-go test ./...
-go vet ./...
-go build -o bin/tasklight ./cmd/tasklight
+make check
 ```
 
 If your change affects notifications, also run:
