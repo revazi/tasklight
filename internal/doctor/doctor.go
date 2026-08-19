@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	brandassets "github.com/revazi/tasklight/assets/brand"
+	"github.com/revazi/tasklight/internal/session"
 )
 
 const tasklightSenderBundleID = "dev.tasklight.Tasklight"
@@ -33,11 +34,17 @@ func Run(w io.Writer) int {
 			failLine(w, "osascript", "missing; basic macOS notifications will not work")
 		}
 
+		if helperPath := macOSNativeHelperPath(); helperPath != "" {
+			okLine(w, "native macOS helper", helperPath)
+		} else {
+			warnLine(w, "native macOS helper", "not bundled; falling back to terminal-notifier or osascript")
+		}
+
 		if path, ok := lookPath("terminal-notifier"); ok {
 			okLine(w, "terminal-notifier", path)
 			checkMacOSSenderApp(w)
 		} else {
-			warnLine(w, "terminal-notifier", "optional but recommended: brew install terminal-notifier")
+			warnLine(w, "terminal-notifier", "optional fallback: brew install terminal-notifier")
 		}
 
 	case "linux":
@@ -61,12 +68,35 @@ func Run(w io.Writer) int {
 
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Focus/session integration")
+	focusTarget := session.Detect(session.DetectOptions{})
+	if focusTarget.ActivateApp != "" {
+		okLine(w, "detected app", focusTarget.ActivateApp)
+	} else {
+		warnLine(w, "detected app", "unknown")
+	}
+	if focusTarget.Terminal.Name != "" || focusTarget.Terminal.BundleID != "" {
+		info(w, "terminal", strings.TrimSpace(focusTarget.Terminal.Name+" "+focusTarget.Terminal.BundleID))
+	}
+	if focusTarget.Terminal.ITermSessionID != "" {
+		info(w, "iTerm session", focusTarget.Terminal.ITermSessionID)
+	}
+	if focusTarget.Terminal.ClientTTY != "" {
+		info(w, "terminal client tty", focusTarget.Terminal.ClientTTY)
+	}
 	if path, ok := lookPath("tmux"); ok {
 		okLine(w, "tmux", path)
 	} else {
 		warnLine(w, "tmux", "not found; tmux pane return will be unavailable")
 	}
-	if pane := os.Getenv("TMUX_PANE"); pane != "" {
+	if focusTarget.Tmux != nil && focusTarget.Tmux.PaneID != "" {
+		okLine(w, "current tmux pane", focusTarget.Tmux.PaneID)
+		if focusTarget.Tmux.ClientName != "" {
+			info(w, "tmux client", focusTarget.Tmux.ClientName)
+		}
+		if focusTarget.Tmux.Session != "" || focusTarget.Tmux.WindowID != "" {
+			info(w, "tmux target", fmt.Sprintf("%s %s %s", focusTarget.Tmux.Session, focusTarget.Tmux.WindowID, focusTarget.Tmux.PaneID))
+		}
+	} else if pane := os.Getenv("TMUX_PANE"); pane != "" {
 		okLine(w, "current tmux pane", pane)
 	} else {
 		warnLine(w, "current tmux pane", "not inside tmux")

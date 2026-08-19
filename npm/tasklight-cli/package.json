@@ -1,6 +1,6 @@
 {
   "name": "@tasklight/cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Tasklight CLI: get notified when long-running developer tasks finish, fail, or need attention.",
   "license": "MIT",
   "author": "Revaz Zakalashvili",
@@ -35,7 +35,9 @@
   ],
   "scripts": {
     "build:vendor": "../../scripts/build-npm-cli.sh",
+    "check": "node --check ./bin/tasklight.js && npm run test:local",
     "pack:check": "npm pack --dry-run",
+    "package:smoke": "../../scripts/package-smoke.sh",
     "test:local": "node ./bin/tasklight.js --version && node ./bin/tasklight.js doctor"
   },
   "publishConfig": {

@@ -1,0 +1,72 @@
+version: 2
+
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    rebase-strategy: auto
+    labels:
+      - dependencies
+      - go
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      go-compatible:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: npm
+    directory: /npm/tasklight-cli
+    target-branch: main
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:15"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    rebase-strategy: auto
+    versioning-strategy: increase-if-necessary
+    labels:
+      - dependencies
+      - npm
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      npm-compatible:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:30"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    rebase-strategy: auto
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      actions-compatible:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch

@@ -1,8 +1,12 @@
 /bin/
 /tasklight
 *.test
+*.prof
 .DS_Store
+.fallow/
+node_modules/
 coverage.out
+coverage/
 tasklight_brand_assets/
 tasklight_brand_assets.zip
 npm/tasklight-cli/vendor/
