@@ -2,17 +2,24 @@
 
 ## Unreleased
 
-Initial public version of Tasklight.
+## [0.1.1] - 2026-08-20
+
+### Added
+
+- Native macOS `Tasklight.app` notification helper bundled with the npm package.
+- Tasklight notification identity, icon, click actions, and focus fallbacks.
+- iTerm2 and tmux click-to-return support.
+- Repository hygiene checks, CI, CodeQL, Scorecard, and Dependabot configuration.
+
+## [0.1.0] - 2026-06-18
 
 ### Added
 
 - `tasklight run -- <command>` command wrapper.
 - Live stdout/stderr streaming and stdin forwarding.
 - Child exit-code preservation.
-- `tasklight notify` for direct notifications from scripts/integrations.
+- `tasklight notify` for direct notifications from scripts and integrations.
 - `tasklight doctor` diagnostics.
-- macOS notifications via bundled native `Tasklight.app`, with optional `terminal-notifier` and `osascript` fallbacks.
+- macOS notifications via optional `terminal-notifier` and `osascript` providers.
 - Linux notifications via `notify-send`.
-- Bundled Tasklight notification icon and macOS sender helper registration.
-- iTerm2 + tmux click-to-return support with best-effort app activation elsewhere.
-- Separate `pi-tasklight` integration package support through `tasklight notify`.
+- npm distribution as `@tasklight/cli`.
