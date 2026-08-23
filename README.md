@@ -212,6 +212,25 @@ tasklight doctor
 
 `doctor` checks platform notification providers, the native macOS helper or fallbacks, Tasklight icon setup, and tmux availability.
 
+### Troubleshooting click-to-focus
+
+Generate one pasteable report when a notification does not return to the expected terminal or tmux pane:
+
+```bash
+tasklight doctor --focus
+```
+
+The focus report includes the detected terminal app and bundle ID, iTerm/Terminal session metadata, terminal and tmux client TTYs, tmux socket/session/window/pane data, selected notification provider, generated click command or script path, and debug log paths.
+
+Debug logs are opt-in. Set `TASKLIGHT_FOCUS_DEBUG=1` on the command that sends the notification, reproduce the click, then run the report again to locate the logs:
+
+```bash
+TASKLIGHT_FOCUS_DEBUG=1 tasklight notify --message "Focus test"
+TASKLIGHT_FOCUS_DEBUG=1 tasklight doctor --focus
+```
+
+Review terminal and tmux names in the report before posting it publicly.
+
 ## Notifications
 
 ### macOS
@@ -274,7 +293,7 @@ Linux currently supports basic finish/failure notifications. Tasklight passes th
 tasklight --version
 tasklight run [options] -- <command> [args...]
 tasklight notify [options]
-tasklight doctor
+tasklight doctor [--focus]
 ```
 
 `run` options:
@@ -296,6 +315,13 @@ tasklight doctor
 --icon string           Path to a notification icon image
 --sound                 Play the platform's default notification sound when supported
 -h, --help              Show help
+```
+
+`doctor` options:
+
+```text
+--focus                  Show detailed notification click-to-focus diagnostics
+-h, --help               Show help
 ```
 
 ## Design principles
