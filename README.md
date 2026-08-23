@@ -55,7 +55,7 @@ Implemented:
 - `--name` for readable notification names
 - `--cwd` for running from another directory
 - `tasklight notify` for direct script/integration notifications
-- separate `pi-tasklight` Pi extension package support via `tasklight notify`
+- clean integration boundary: Tasklight stays a generic CLI; integrations call it from separate packages
 - macOS notifications via bundled native `Tasklight.app`, with `terminal-notifier`/`osascript` fallbacks
 - Linux notifications via `notify-send`
 - iTerm2 + tmux click-to-return
@@ -152,7 +152,7 @@ tasklight run --cwd frontend -- pnpm build
 Send a direct notification:
 
 ```bash
-tasklight notify --subtitle "✅ Pi is ready" --message "Fixed failing auth test setup."
+tasklight notify --subtitle "✅ Build finished" --message "Frontend assets are ready."
 ```
 
 Check exit-code preservation:
@@ -181,52 +181,26 @@ tasklight run --cwd backend --name "Django tests" -- python manage.py test
 tasklight run --name "Docker build" -- docker build .
 
 # Coding-agent task
-tasklight run --name "Pi task" -- pi "fix this failing test"
+tasklight run --name "Agent task" -- your-agent "fix this failing test"
 
 # Direct notification from a script or integration
-tasklight notify --title "Pi" --subtitle "✅ Task finished" --message "Updated tests and mocks."
+tasklight notify --title "Deploy" --subtitle "✅ Task finished" --message "Updated production assets."
 ```
 
-## Pi integration — coming soon
+## Integrations
 
-A separate Pi integration package, `pi-tasklight`, is planned but not public yet.
+Tasklight is intentionally a generic notification CLI. It owns command running, desktop notification providers, package distribution, and terminal/tmux focus behavior.
 
-Planned public repo:
+Integration-specific code belongs in separate packages that call `tasklight notify` or depend on `@tasklight/cli`.
 
-```text
-https://github.com/revazi/pi-tasklight
-```
+Known integrations:
 
-That repository is private for now. It will be made public after the integration is ready for users.
+- [`@tasklight/pi-tasklight`](https://github.com/revazi/pi-tasklight) — Pi coding-agent extension for Tasklight notifications
 
-`pi-tasklight` adds a Pi slash command:
+Report issues in the repository that owns the failing behavior:
 
-```text
-/tl fix the failing auth test
-```
-
-When the Pi task finishes, the extension sends a Tasklight notification with a short summary. It does not make a second summarization model call; instead, it adds a small per-turn instruction asking Pi to include a short notification summary marker, then strips that marker from the saved/displayed assistant message.
-
-Inside Pi:
-
-```text
-/tl run the tests and fix any failures
-/tl-on       # enable notifications for every normal Pi prompt in this session
-/tl-off      # disable always-on mode
-/tl-toggle   # toggle always-on mode
-/tl-doctor   # run tasklight doctor inside Pi
-/tl-test
-```
-
-Future install target:
-
-```bash
-pi install git:github.com/revazi/pi-tasklight
-# later, once published to npm:
-pi install npm:@tasklight/pi-tasklight
-```
-
-The future npm package should depend on an installable Tasklight CLI package, so Pi users do not need to manually build or install Tasklight first.
+- Tasklight CLI, notifications, packaging, or focus bugs: <https://github.com/revazi/tasklight/issues>
+- Pi slash commands or Pi extension behavior: <https://github.com/revazi/pi-tasklight/issues>
 
 ## Doctor
 
@@ -234,12 +208,6 @@ Check local notification/focus provider setup:
 
 ```bash
 tasklight doctor
-```
-
-Inside Pi with `pi-tasklight` loaded:
-
-```text
-/tl-doctor
 ```
 
 `doctor` checks platform notification providers, the native macOS helper or fallbacks, Tasklight icon setup, and tmux availability.
