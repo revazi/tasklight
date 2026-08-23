@@ -3,6 +3,8 @@ package cli
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -251,6 +253,49 @@ func TestExecuteNotifyFailure(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "tasklight notify: notification failed: boom") {
 		t.Fatalf("stderr = %q, want notification error", stderr.String())
+	}
+}
+
+func TestExecuteDoctorFocus(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	called := false
+
+	oldRunFocusDoctor := runFocusDoctor
+	runFocusDoctor = func(w io.Writer) int {
+		called = true
+		fmt.Fprintln(w, "focus report")
+		return 0
+	}
+	t.Cleanup(func() { runFocusDoctor = oldRunFocusDoctor })
+
+	code := ExecuteWithNotifier([]string{"doctor", "--focus"}, strings.NewReader(""), &stdout, &stderr, &recordingNotifier{})
+
+	if code != 0 {
+		t.Fatalf("code = %d, want 0", code)
+	}
+	if !called {
+		t.Fatal("focus doctor was not called")
+	}
+	if got := stdout.String(); got != "focus report\n" {
+		t.Fatalf("stdout = %q, want focus report", got)
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+}
+
+func TestExecuteDoctorRejectsUnknownOption(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	code := ExecuteWithNotifier([]string{"doctor", "--unknown"}, strings.NewReader(""), &stdout, &stderr, &recordingNotifier{})
+
+	if code != 2 {
+		t.Fatalf("code = %d, want 2", code)
+	}
+	if !strings.Contains(stderr.String(), "flag provided but not defined") {
+		t.Fatalf("stderr = %q, want flag error", stderr.String())
 	}
 }
 

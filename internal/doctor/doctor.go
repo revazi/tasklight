@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	brandassets "github.com/revazi/tasklight/assets/brand"
+	"github.com/revazi/tasklight/internal/notify"
 	"github.com/revazi/tasklight/internal/session"
 )
 
@@ -34,7 +35,7 @@ func Run(w io.Writer) int {
 			failLine(w, "osascript", "missing; basic macOS notifications will not work")
 		}
 
-		if helperPath := macOSNativeHelperPath(); helperPath != "" {
+		if helperPath := notify.DiagnoseFocus("").NativeHelperPath; helperPath != "" {
 			okLine(w, "native macOS helper", helperPath)
 		} else {
 			warnLine(w, "native macOS helper", "not bundled; falling back to terminal-notifier or osascript")

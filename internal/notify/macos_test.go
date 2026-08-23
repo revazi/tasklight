@@ -5,6 +5,7 @@ package notify
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -228,6 +229,48 @@ func TestMacOSNotifierFallsBackToAppleScript(t *testing.T) {
 		if arg == "-appIcon" || arg == notification.IconPath {
 			t.Fatalf("osascript fallback args %#v should not include icon args", gotArgs)
 		}
+	}
+}
+
+func TestDiagnoseFocusUsesNativeHelper(t *testing.T) {
+	diagnostics := diagnoseFocus(
+		"echo focus",
+		func() string { return "/Applications/Tasklight.app" },
+		func(string) (string, error) { return "", errors.New("lookup should not be needed") },
+	)
+
+	if diagnostics.Provider != "native macOS helper" {
+		t.Fatalf("Provider = %q, want native macOS helper", diagnostics.Provider)
+	}
+	if diagnostics.ProviderPath != "/Applications/Tasklight.app" || diagnostics.NativeHelperPath != diagnostics.ProviderPath {
+		t.Fatalf("helper paths = %#v, want selected helper", diagnostics)
+	}
+	if !diagnostics.SupportsClick || diagnostics.ExecutionCommand != "echo focus" {
+		t.Fatalf("focus diagnostics = %#v, want direct click command", diagnostics)
+	}
+}
+
+func TestDiagnoseFocusShowsTerminalNotifierScriptPath(t *testing.T) {
+	clickCommand := strings.Repeat("focus ", 100)
+	diagnostics := diagnoseFocus(
+		clickCommand,
+		func() string { return "" },
+		func(name string) (string, error) {
+			if name == "terminal-notifier" {
+				return "/opt/bin/terminal-notifier", nil
+			}
+			return "", errors.New("not found")
+		},
+	)
+
+	if diagnostics.Provider != "terminal-notifier" || !diagnostics.SupportsClick {
+		t.Fatalf("focus diagnostics = %#v, want terminal-notifier", diagnostics)
+	}
+	if diagnostics.ScriptPath == "" {
+		t.Fatal("ScriptPath is empty, want generated path")
+	}
+	if !strings.Contains(diagnostics.ExecutionCommand, diagnostics.ScriptPath) {
+		t.Fatalf("ExecutionCommand = %q, want script path %q", diagnostics.ExecutionCommand, diagnostics.ScriptPath)
 	}
 }
 

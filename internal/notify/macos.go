@@ -53,6 +53,46 @@ func DefaultNotifier() Notifier {
 	return MacOSNotifier{}
 }
 
+// DiagnoseFocus reports the provider and execution path that would be used for
+// a click-to-focus command without sending a notification.
+func DiagnoseFocus(clickCommand string) FocusDiagnostics {
+	return diagnoseFocus(clickCommand, defaultNativeHelperPath, exec.LookPath)
+}
+
+func diagnoseFocus(clickCommand string, nativeHelperPath nativeHelperProvider, lookPath pathLookup) FocusDiagnostics {
+	diagnostics := newFocusDiagnostics()
+	diagnostics.NativeHelperLogPath, diagnostics.FocusLogPath = focusLogPaths()
+	diagnostics.NativeHelperPath = nativeHelperPath()
+
+	if diagnostics.NativeHelperPath != "" {
+		diagnostics.Provider = "native macOS helper"
+		diagnostics.ProviderPath = diagnostics.NativeHelperPath
+		diagnostics.SupportsClick = true
+		diagnostics.ExecutionCommand = clickCommand
+		return diagnostics
+	}
+
+	if terminalNotifierPath, err := lookPath("terminal-notifier"); err == nil {
+		diagnostics.Provider = "terminal-notifier"
+		diagnostics.ProviderPath = terminalNotifierPath
+		diagnostics.SupportsClick = true
+		diagnostics.ExecutionCommand = clickCommand
+		if shouldWrapExecuteCommand(clickCommand) {
+			diagnostics.ScriptPath = executeScriptPath(clickCommand)
+			if diagnostics.ScriptPath != "" {
+				diagnostics.ExecutionCommand = shellJoin([]string{"/bin/sh", diagnostics.ScriptPath})
+			}
+		}
+		return diagnostics
+	}
+
+	diagnostics.Provider = "osascript fallback"
+	if osascriptPath, err := lookPath("osascript"); err == nil {
+		diagnostics.ProviderPath = osascriptPath
+	}
+	return diagnostics
+}
+
 func (n MacOSNotifier) Notify(notification Notification) error {
 	title := notification.Title
 	if title == "" {
@@ -251,22 +291,28 @@ func shouldWrapExecuteCommand(command string) bool {
 }
 
 func writeExecuteScript(command string) string {
-	cacheDir, err := os.UserCacheDir()
-	if err != nil || cacheDir == "" {
-		cacheDir = os.TempDir()
+	scriptPath := executeScriptPath(command)
+	if scriptPath == "" {
+		return ""
 	}
-	scriptDir := filepath.Join(cacheDir, "tasklight", "focus")
+	scriptDir := filepath.Dir(scriptPath)
 	if err := os.MkdirAll(scriptDir, 0o755); err != nil {
 		return ""
 	}
 
-	sum := sha256.Sum256([]byte(command))
-	scriptPath := filepath.Join(scriptDir, hex.EncodeToString(sum[:8])+".sh")
 	content := "#!/bin/sh\n" + focusDebugPrelude(scriptDir) + command + "\n"
 	if err := os.WriteFile(scriptPath, []byte(content), 0o755); err != nil {
 		return ""
 	}
 	return scriptPath
+}
+
+func executeScriptPath(command string) string {
+	if command == "" {
+		return ""
+	}
+	sum := sha256.Sum256([]byte(command))
+	return filepath.Join(tasklightCacheDir(), "focus", hex.EncodeToString(sum[:8])+".sh")
 }
 
 func focusDebugPrelude(scriptDir string) string {

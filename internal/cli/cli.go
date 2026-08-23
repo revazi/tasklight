@@ -32,7 +32,11 @@ type notifyOptions struct {
 
 var Version = "dev"
 
-var detectFocusTarget = session.Detect
+var (
+	detectFocusTarget = session.Detect
+	runDoctor         = doctor.Run
+	runFocusDoctor    = doctor.RunFocus
+)
 
 func Execute(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer) int {
 	return ExecuteWithNotifier(args, stdin, stdout, stderr, notify.DefaultNotifier())
@@ -105,12 +109,24 @@ func executeDoctor(args []string, stdout io.Writer, stderr io.Writer) int {
 		printDoctorHelp(stdout)
 		return 0
 	}
-	if len(args) > 0 {
-		fmt.Fprintf(stderr, "tasklight doctor: unexpected argument: %s\n\n", strings.Join(args, " "))
+
+	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	focus := fs.Bool("focus", false, "show detailed click-to-focus diagnostics")
+	if err := fs.Parse(args); err != nil {
+		fmt.Fprintf(stderr, "tasklight doctor: %v\n\n", err)
 		printDoctorHelp(stderr)
 		return 2
 	}
-	return doctor.Run(stdout)
+	if len(fs.Args()) > 0 {
+		fmt.Fprintf(stderr, "tasklight doctor: unexpected argument: %s\n\n", strings.Join(fs.Args(), " "))
+		printDoctorHelp(stderr)
+		return 2
+	}
+	if *focus {
+		return runFocusDoctor(stdout)
+	}
+	return runDoctor(stdout)
 }
 
 func executeNotify(args []string, stdout io.Writer, stderr io.Writer, notifier notify.Notifier) int {
@@ -311,7 +327,11 @@ func printDoctorHelp(w io.Writer) {
 	fmt.Fprint(w, `Check Tasklight notification and focus integration.
 
 Usage:
-  tasklight doctor
+  tasklight doctor [--focus]
+
+Options:
+  --focus    Show terminal/tmux targets, generated commands, provider, and log paths
+  -h, --help Show this help
 
 Checks:
   - platform notification provider availability

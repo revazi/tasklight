@@ -48,6 +48,14 @@ brew install terminal-notifier
 
 Without the native helper or `terminal-notifier`, Tasklight falls back to built-in `osascript` notifications.
 
+If click-to-focus returns to the wrong terminal or tmux pane, generate a pasteable diagnostic report:
+
+```bash
+tasklight doctor --focus
+```
+
+The report shows the selected provider, terminal/tmux target, generated focus action, and opt-in debug log paths.
+
 ## Linux notification dependency
 
 Linux desktop notifications use `notify-send`.

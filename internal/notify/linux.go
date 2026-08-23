@@ -23,6 +23,17 @@ func DefaultNotifier() Notifier {
 	return LinuxNotifier{}
 }
 
+// DiagnoseFocus reports the Linux notification provider. Basic notify-send
+// notifications do not currently expose a portable click action.
+func DiagnoseFocus(_ string) FocusDiagnostics {
+	diagnostics := newFocusDiagnostics()
+	diagnostics.Provider = "notify-send"
+	if path, err := exec.LookPath("notify-send"); err == nil {
+		diagnostics.ProviderPath = path
+	}
+	return diagnostics
+}
+
 func (n LinuxNotifier) Notify(notification Notification) error {
 	title := notification.Title
 	if title == "" {
