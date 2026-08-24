@@ -32,6 +32,11 @@ func RunFocus(w io.Writer) int {
 		Notification: notify.DiagnoseFocus(clickCommand),
 	}
 	WriteFocusReport(w, report)
+	if runtime.GOOS == "darwin" && report.Notification.NativeHelperPath != "" {
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "Native macOS helper")
+		writeMacOSHelperDiagnostics(w, detectMacOSHelperDiagnostics(report.Notification.NativeHelperPath))
+	}
 	if runtime.GOOS == "linux" {
 		writeLinuxDiagnostics(w, detectLinuxDiagnostics())
 	}

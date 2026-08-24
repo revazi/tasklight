@@ -16,6 +16,8 @@ var macOSAppIcon []byte
 
 const defaultIconFileName = "tasklight-app-icon-1024.png"
 const macOSAppName = "Tasklight.app"
+const macOSBrandVersion = "2.1"
+const macOSBrandBuild = "2"
 
 // DefaultIconPath returns a filesystem path to the bundled Tasklight app icon.
 //
@@ -95,11 +97,8 @@ func DefaultMacOSAppBundle(bundleID string) string {
 }
 
 func shouldWriteIcon(path string) bool {
-	info, err := os.Stat(path)
-	if err != nil {
-		return true
-	}
-	return info.Size() != int64(len(defaultIcon))
+	current, err := os.ReadFile(path)
+	return err != nil || !bytes.Equal(current, defaultIcon)
 }
 
 func writeFileIfNeeded(path string, content []byte, perm os.FileMode) bool {
@@ -133,9 +132,9 @@ func macOSInfoPlist(bundleID string) string {
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.0</string>
+	<string>` + macOSBrandVersion + `</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>` + macOSBrandBuild + `</string>
 	<key>LSBackgroundOnly</key>
 	<true/>
 </dict>

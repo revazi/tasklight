@@ -5,6 +5,8 @@ package notify
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -271,6 +273,32 @@ func TestDiagnoseFocusShowsTerminalNotifierScriptPath(t *testing.T) {
 	}
 	if !strings.Contains(diagnostics.ExecutionCommand, diagnostics.ScriptPath) {
 		t.Fatalf("ExecutionCommand = %q, want script path %q", diagnostics.ExecutionCommand, diagnostics.ScriptPath)
+	}
+}
+
+func TestWriteExecuteScriptUsesRestrictivePermissions(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("TASKLIGHT_FOCUS_DEBUG", "1")
+
+	path := writeExecuteScript("printf focused")
+	if path == "" {
+		t.Fatal("writeExecuteScript() returned an empty path")
+	}
+	for _, target := range []string{path, filepath.Dir(path)} {
+		info, err := os.Stat(target)
+		if err != nil {
+			t.Fatalf("Stat(%q): %v", target, err)
+		}
+		if got := info.Mode().Perm(); got != 0o700 {
+			t.Fatalf("permissions for %q = %o, want 700", target, got)
+		}
+	}
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile(%q): %v", path, err)
+	}
+	if !strings.Contains(string(content), "umask 077") {
+		t.Fatalf("focus script is missing restrictive umask:\n%s", content)
 	}
 }
 
