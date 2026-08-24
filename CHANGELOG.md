@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## [0.2.0] - 2026-08-24
+
 ### Added
 
 - `tasklight doctor --focus` diagnostics for notification providers, terminal/tmux targets, generated focus actions, and debug log paths.
