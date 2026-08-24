@@ -71,7 +71,7 @@ func TestMacOSNotifierUsesTerminalNotifierWhenAvailable(t *testing.T) {
 			gotArgs = append([]string(nil), args...)
 			return nil
 		},
-		senderBundleID: func() string { return "dev.tasklight.Tasklight" },
+		senderBundleID: func() string { return "dev.tasklight.sender.v2" },
 	}
 
 	notification := Notification{
@@ -131,14 +131,14 @@ func TestMacOSNotifierUsesSenderWhenNoClickCommand(t *testing.T) {
 			gotArgs = append([]string(nil), args...)
 			return nil
 		},
-		senderBundleID: func() string { return "dev.tasklight.Tasklight" },
+		senderBundleID: func() string { return "dev.tasklight.sender.v2" },
 	}
 
 	if err := notifier.Notify(Notification{Message: "hello"}); err != nil {
 		t.Fatalf("Notify() error = %v, want nil", err)
 	}
 
-	assertContainsArgPair(t, gotArgs, "-sender", "dev.tasklight.Tasklight")
+	assertContainsArgPair(t, gotArgs, "-sender", "dev.tasklight.sender.v2")
 	assertNotContainsArg(t, gotArgs, "-execute")
 	assertNotContainsArg(t, gotArgs, "-appIcon")
 }
@@ -153,7 +153,7 @@ func TestMacOSNotifierUsesActivateWhenNoClickCommand(t *testing.T) {
 			gotArgs = append([]string(nil), args...)
 			return nil
 		},
-		senderBundleID: func() string { return "dev.tasklight.Tasklight" },
+		senderBundleID: func() string { return "dev.tasklight.sender.v2" },
 	}
 
 	if err := notifier.Notify(Notification{Message: "hello", ActivateApp: "com.apple.Terminal"}); err != nil {

@@ -16,6 +16,8 @@ var macOSAppIcon []byte
 
 const defaultIconFileName = "tasklight-app-icon-1024.png"
 const macOSAppName = "Tasklight.app"
+const macOSIconResourceName = "Tasklight-v2"
+const macOSIconResourceFileName = macOSIconResourceName + ".icns"
 const macOSBrandVersion = "2.1"
 const macOSBrandBuild = "2"
 
@@ -78,7 +80,11 @@ func DefaultMacOSAppBundle(bundleID string) string {
 
 	infoPlistPath := filepath.Join(contentsPath, "Info.plist")
 	executablePath := filepath.Join(macOSPath, "tasklight-notification-helper")
-	iconPath := filepath.Join(resourcesPath, "Tasklight.icns")
+	iconPath := filepath.Join(resourcesPath, macOSIconResourceFileName)
+
+	// Remove the pre-v2 resource so an upgraded sender cannot be indexed with
+	// the stale icon even though its plist points at the cache-safe filename.
+	_ = os.Remove(filepath.Join(resourcesPath, "Tasklight.icns"))
 
 	if !writeFileIfNeeded(infoPlistPath, []byte(macOSInfoPlist(bundleID)), 0o644) {
 		return ""
@@ -122,7 +128,7 @@ func macOSInfoPlist(bundleID string) string {
 	<key>CFBundleExecutable</key>
 	<string>tasklight-notification-helper</string>
 	<key>CFBundleIconFile</key>
-	<string>Tasklight</string>
+	<string>` + macOSIconResourceName + `</string>
 	<key>CFBundleIdentifier</key>
 	<string>` + escapedBundleID + `</string>
 	<key>CFBundleInfoDictionaryVersion</key>

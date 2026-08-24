@@ -28,7 +28,7 @@ const displayNotificationScript = `on run argv
 	end if
 end run`
 
-const tasklightSenderBundleID = "dev.tasklight.Tasklight"
+const tasklightSenderBundleID = "dev.tasklight.sender.v2"
 
 type commandRunner func(name string, args ...string) error
 type commandStarter func(name string, args ...string) error

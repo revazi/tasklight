@@ -18,7 +18,7 @@ build_target() {
   chmod +x "$PKG/vendor/$dir/tasklight"
 
   if [[ "$goos" == "darwin" ]] && command -v xcrun >/dev/null 2>&1; then
-    "$ROOT/scripts/build-macos-helper.sh" "$PKG/vendor/$dir" "$dir" >/dev/null
+    TASKLIGHT_SKIP_REGISTER=1 "$ROOT/scripts/build-macos-helper.sh" "$PKG/vendor/$dir" "$dir" >/dev/null
   fi
 }
 

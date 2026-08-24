@@ -9,7 +9,7 @@ import (
 func TestWriteMacOSHelperDiagnostics(t *testing.T) {
 	diagnostics := macOSHelperDiagnostics{
 		ExecutablePath:        "/Applications/Tasklight.app/Contents/MacOS/TasklightNotifier",
-		BundleID:              "dev.tasklight.Tasklight",
+		BundleID:              "dev.tasklight.notifier",
 		Authorization:         "authorized",
 		Alerts:                "enabled",
 		Sounds:                "disabled",
@@ -31,7 +31,7 @@ func TestWriteMacOSHelperDiagnostics(t *testing.T) {
 		"helper quarantine",
 		"not present",
 		"helper registration",
-		"dev.tasklight.Tasklight",
+		"dev.tasklight.notifier",
 		"notification authorization",
 		"authorized",
 		"notification alerts",
@@ -60,8 +60,8 @@ func TestWriteMacOSHelperDiagnosticsExplainsDeniedAuthorization(t *testing.T) {
 }
 
 func TestParseMacOSHelperOutput(t *testing.T) {
-	values := parseMacOSHelperOutput("bundle-id=dev.tasklight.Tasklight\nauthorization=not-determined\nalerts=enabled\ninvalid\n")
-	if values["bundle-id"] != "dev.tasklight.Tasklight" || values["authorization"] != "not-determined" || values["alerts"] != "enabled" {
+	values := parseMacOSHelperOutput("bundle-id=dev.tasklight.notifier\nauthorization=not-determined\nalerts=enabled\ninvalid\n")
+	if values["bundle-id"] != "dev.tasklight.notifier" || values["authorization"] != "not-determined" || values["alerts"] != "enabled" {
 		t.Fatalf("parseMacOSHelperOutput() = %#v", values)
 	}
 }

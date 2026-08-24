@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## [0.2.1] - 2026-08-24
+
+### Fixed
+
+- Force macOS to load the v2 notification icon by using a cache-safe bundle identity and icon resource name, and prevent npm package builds from registering temporary helper bundles.
+
 ## [0.2.0] - 2026-08-24
 
 ### Added

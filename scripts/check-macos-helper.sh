@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP="${1:-}"
 TARGET="${2:-}"
 EXPECTED_VERSION="${3:-}"
@@ -16,7 +17,7 @@ fi
 
 PLIST="$APP/Contents/Info.plist"
 EXECUTABLE="$APP/Contents/MacOS/TasklightNotifier"
-ICON="$APP/Contents/Resources/Tasklight.icns"
+ICON="$APP/Contents/Resources/Tasklight-v2.icns"
 
 for path in "$PLIST" "$EXECUTABLE" "$ICON"; do
   if [[ ! -f "$path" ]]; then
@@ -32,8 +33,17 @@ fi
 plutil -lint "$PLIST" >/dev/null
 bundle_id="$(plutil -extract CFBundleIdentifier raw "$PLIST")"
 version="$(plutil -extract CFBundleShortVersionString raw "$PLIST")"
-if [[ "$bundle_id" != "dev.tasklight.Tasklight" ]]; then
+icon_name="$(plutil -extract CFBundleIconFile raw "$PLIST")"
+if [[ "$bundle_id" != "dev.tasklight.notifier" ]]; then
   echo "unexpected native helper bundle ID: $bundle_id" >&2
+  exit 1
+fi
+if [[ "$icon_name" != "Tasklight-v2" ]]; then
+  echo "unexpected native helper icon resource: $icon_name" >&2
+  exit 1
+fi
+if ! cmp -s "$ROOT/assets/brand/Tasklight.icns" "$ICON"; then
+  echo "native helper icon does not match the repository brand asset" >&2
   exit 1
 fi
 if [[ -n "$EXPECTED_VERSION" && "$version" != "$EXPECTED_VERSION" ]]; then
@@ -121,7 +131,7 @@ if [[ ! -f "$DEBUG_LOG" || "$(stat -f '%Lp' "$DEBUG_LOG")" != "600" ]]; then
 fi
 
 run_with_timeout "$EXECUTABLE" doctor --timeout 3 >"$TMP/doctor.txt"
-grep -Fx "bundle-id=dev.tasklight.Tasklight" "$TMP/doctor.txt" >/dev/null
+grep -Fx "bundle-id=dev.tasklight.notifier" "$TMP/doctor.txt" >/dev/null
 grep -E '^authorization=(authorized|denied|not-determined|provisional|ephemeral|unknown|unavailable)$' "$TMP/doctor.txt" >/dev/null
 grep -E '^alerts=(enabled|disabled|not-supported|unknown)$' "$TMP/doctor.txt" >/dev/null
 grep -E '^sounds=(enabled|disabled|not-supported|unknown)$' "$TMP/doctor.txt" >/dev/null
