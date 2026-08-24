@@ -1,7 +1,8 @@
 VERSION ?= dev
 LDFLAGS := -X github.com/revazi/tasklight/internal/cli.Version=$(VERSION)
+FUZZTIME ?= 5s
 
-.PHONY: check check-format test test-race vet build run cross-compile macos-helper npm-package package-smoke clean
+.PHONY: check check-format test test-race fuzz-smoke vet build run cross-compile macos-helper npm-package package-smoke clean
 
 check:
 	./scripts/check.sh
@@ -14,6 +15,10 @@ test:
 
 test-race:
 	go test -race ./...
+
+fuzz-smoke:
+	go test -run='^$$' -fuzz='^FuzzShellJoin$$' -fuzztime=$(FUZZTIME) ./internal/session
+	go test -run='^$$' -fuzz='^FuzzParseRunArgs$$' -fuzztime=$(FUZZTIME) ./internal/cli
 
 vet:
 	go vet ./...

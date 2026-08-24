@@ -77,6 +77,10 @@ jobs:
       - name: Unit tests
         run: make test
 
+      - name: Fuzz smoke tests
+        if: matrix.os == 'ubuntu-latest'
+        run: make fuzz-smoke
+
       - name: Race detector
         run: make test-race
 

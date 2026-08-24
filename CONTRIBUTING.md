@@ -16,8 +16,11 @@ Common checks:
 
 ```bash
 make check
+make fuzz-smoke
 ./bin/tasklight doctor
 ```
+
+`make fuzz-smoke` runs bounded fuzzing for shell command construction and CLI argument parsing. Override the per-target duration with `FUZZTIME=30s make fuzz-smoke`.
 
 Package checks:
 
