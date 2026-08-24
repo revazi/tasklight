@@ -35,6 +35,8 @@ make package-smoke
 
 Releases are built from `vX.Y.Z` tags by [the release workflow](.github/workflows/release.yml). The workflow verifies the tag and changelog, runs the repository checks, builds the native macOS helper, smoke-tests the packed npm package, publishes with npm provenance, and creates a GitHub release with generated notes.
 
+Release notes must identify any publicly known runtime vulnerability fixed by the release, including its CVE or advisory identifier when one exists.
+
 Before tagging a release:
 
 1. Update the version in both `npm/tasklight-cli/package.json` and `npm/tasklight-cli/package-lock.json`.
@@ -70,6 +72,7 @@ npm publish ./npm/tasklight-cli --dry-run --access public
 - Do not store command output by default.
 - Avoid shell execution unless the user explicitly asks for shell behavior.
 - Keep platform-specific behavior behind small provider interfaces.
+- Add or update automated tests for bug fixes and significant behavior changes; add fuzz seeds or targets for parser and command-construction boundaries when appropriate.
 
 ## Before opening a PR
 
