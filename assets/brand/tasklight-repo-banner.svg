@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 640" role="img" aria-labelledby="title desc">
+  <title id="title">Tasklight</title>
+  <desc id="desc">Run long tasks. Get notified.</desc>
+  <rect width="1600" height="640" fill="#F4F0E6"/>
+  <rect width="640" height="640" fill="#111111"/>
+
+  <g transform="scale(.625)">
+    <g transform="translate(-70.5 90)">
+      <g transform="translate(0 46)">
+        <path d="M268 334 470 512 268 690" fill="none" stroke="#FFD43B" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M502 690h164" fill="none" stroke="#F4F0E6" stroke-width="76" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(0 -45)">
+        <circle cx="746" cy="304" r="60" fill="#FFD43B"/>
+        <g fill="none" stroke="#FFD43B" stroke-width="34" stroke-linecap="round">
+          <path d="M746 186v-54"/>
+          <path d="m830 220 39-39"/>
+          <path d="M864 304h54"/>
+        </g>
+      </g>
+    </g>
+  </g>
+
+  <text x="810" y="164" fill="#625D52" font-family="Helvetica Neue, Arial, sans-serif" font-size="17" font-weight="700" letter-spacing="4.75">TERMINAL TASK NOTIFICATIONS</text>
+  <text x="804" y="302" fill="#111111" font-family="Helvetica Neue, Arial, sans-serif" font-size="112" font-weight="800" letter-spacing="-5">Tasklight</text>
+  <text x="810" y="371" fill="#403C35" font-family="Helvetica Neue, Arial, sans-serif" font-size="34" font-weight="500">Run long tasks. Get notified.</text>
+
+  <rect x="810" y="433" width="620" height="72" rx="12" fill="#111111"/>
+  <text x="848" y="478" fill="#FFD43B" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="21" font-weight="700">› tasklight</text>
+  <text x="994" y="478" fill="#F4F0E6" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="21">run -- pnpm test</text>
+</svg>

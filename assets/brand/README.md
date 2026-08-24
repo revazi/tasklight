@@ -1,18 +1,38 @@
-# Tasklight Brand Assets
+# Tasklight Brand Assets — v2.1
 
-Canonical assets used by the Tasklight codebase and repository.
+A flat, high-contrast identity built around one consistent terminal-prompt and notification-beacon glyph.
 
-## Runtime notification assets
+## Runtime assets
 
-These files are embedded into the Tasklight Go binary by `assets.go`:
+These files are embedded or packaged by the Tasklight codebase:
 
-- `tasklight-app-icon-1024.png` — default notification icon used by `tasklight notify` and Linux `notify-send`.
-- `Tasklight.icns` — macOS app icon used for the local `Tasklight.app` notification sender helper.
+- `tasklight-app-icon-1024.png` — default notification icon embedded by `assets.go` and used by supported notification providers.
+- `Tasklight.icns` — macOS icon bundle embedded for the fallback sender app and copied into the native `Tasklight.app` helper.
 
 ## Repository assets
 
-- `tasklight-repo-banner-1600x640.png` — README/repository banner.
-- `tasklight-github-avatar-1024.png` — GitHub organization/repository avatar candidate.
-- `tasklight-mark-transparent-1024.png` — transparent standalone Tasklight mark.
+- `tasklight-repo-banner-1600x640.png` — README and repository banner.
+- `tasklight-github-avatar-1024.png` — avatar with a GitHub-safe circular crop.
+- `tasklight-mark-transparent-1024.png` — standalone mark for dark backgrounds.
 
-Raw generated asset exports should not be referenced by the codebase. Keep runtime/repository assets here instead.
+## Vector sources
+
+- `tasklight-repo-banner.svg`
+- `tasklight-app-icon.svg`
+- `tasklight-mark-light.svg`
+- `tasklight-mark-dark.svg`
+- `tasklight-mark-mono.svg`
+
+## Small icons
+
+PNG exports at 16, 32, 48, 64, 128, 256, and 512 pixels are under `icons/`.
+
+The archive preview, source `.iconset`, macOS metadata, and original archive are generation inputs or duplicates and are intentionally not retained in the repository.
+
+## Palette
+
+- Ink: `#111111`
+- Paper: `#F4F0E6`
+- Signal: `#FFD43B`
+- Success: `#35B979`
+- Failure: `#E95B5B`
