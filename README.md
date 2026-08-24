@@ -78,6 +78,14 @@ Install with npm:
 npm install -g @tasklight/cli
 ```
 
+Starting with v0.2.0, install from the supported Homebrew tap:
+
+```bash
+brew install revazi/tap/tasklight
+```
+
+The Homebrew formula builds from the tagged source and builds the native notification helper locally on macOS. See the [distribution policy](docs/DISTRIBUTION.md).
+
 Or run without installing globally:
 
 ```bash

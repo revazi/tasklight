@@ -142,6 +142,13 @@ jobs:
       - name: Tarball install smoke test
         run: make package-smoke
 
+      - name: Validate Homebrew formula generation
+        run: |
+          version="$(node -p 'require("./npm/tasklight-cli/package.json").version')"
+          formula_dir="$(mktemp -d)/Formula"
+          ./scripts/generate-homebrew-formula.sh "$version" "$(printf '0%.0s' {1..64})" "$formula_dir/tasklight.rb"
+          (cd "$(dirname "$formula_dir")" && brew style Formula/tasklight.rb)
+
   dependency-review:
     name: Dependency review
     if: github.event_name == 'pull_request'

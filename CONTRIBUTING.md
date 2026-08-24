@@ -72,6 +72,8 @@ Before tagging a release:
    git push origin vX.Y.Z
    ```
 
+6. After npm and the GitHub release succeed, copy the generated `tasklight.rb` release asset into `revazi/homebrew-tap`, verify its version/source checksum, and run the Homebrew installation checks in [docs/DISTRIBUTION.md](docs/DISTRIBUTION.md).
+
 The publish job targets the protected GitHub environment named `npm`. Configure that environment with required reviewers. In npm package settings, configure a trusted publisher for repository `revazi/tasklight`, workflow `release.yml`, and environment `npm`. The workflow intentionally uses short-lived OIDC credentials and does not read a long-lived `NPM_TOKEN` secret.
 
 For a local metadata check and package dry run, use:

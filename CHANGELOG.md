@@ -12,6 +12,7 @@
 - Opt-in best-effort Linux notification actions that return to a captured tmux target.
 - Native macOS helper signing, authorization, registration, quarantine, and lifecycle diagnostics.
 - Tasklight v2.1 brand identity across repository and notification assets.
+- Homebrew tap distribution with a source-built native macOS helper.
 
 ## [0.1.1] - 2026-08-20
 
