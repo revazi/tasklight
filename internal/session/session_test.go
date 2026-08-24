@@ -39,7 +39,7 @@ func TestFocusTargetClickCommandIncludesTmuxSwitchClientAndItermFocus(t *testing
 		},
 	}
 
-	command := target.ClickCommand()
+	command := target.ClickCommandForPlatform("darwin")
 
 	wantParts := []string{
 		"tmux",
@@ -62,10 +62,28 @@ func TestFocusTargetClickCommandIncludesTmuxSwitchClientAndItermFocus(t *testing
 	}
 }
 
+func TestFocusTargetClickCommandForLinuxUsesTmuxOnly(t *testing.T) {
+	target := FocusTarget{
+		ActivateApp: "com.googlecode.iterm2",
+		Terminal:    TerminalTarget{ITermSessionID: "session-123"},
+		Tmux:        &TmuxTarget{Session: "project", WindowID: "@10", PaneID: "%55"},
+	}
+
+	command := target.ClickCommandForPlatform("linux")
+	if !strings.Contains(command, "select-pane") {
+		t.Fatalf("ClickCommandForPlatform(linux) = %q, want tmux command", command)
+	}
+	for _, unwanted := range []string{"osascript", "com.googlecode.iterm2", "open"} {
+		if strings.Contains(command, unwanted) {
+			t.Fatalf("ClickCommandForPlatform(linux) = %q, should not contain %q", command, unwanted)
+		}
+	}
+}
+
 func TestFocusTargetClickCommandFallsBackToOpenForTerminal(t *testing.T) {
 	target := FocusTarget{ActivateApp: "com.apple.Terminal"}
 
-	command := target.ClickCommand()
+	command := target.ClickCommandForPlatform("darwin")
 
 	if !strings.Contains(command, "'open' '-b' 'com.apple.Terminal'") {
 		t.Fatalf("ClickCommand() = %q, want open fallback", command)
@@ -78,7 +96,7 @@ func TestTerminalFocusCommandUsesClientTTY(t *testing.T) {
 		Terminal:    TerminalTarget{ClientTTY: "/dev/ttys123"},
 	}
 
-	command := target.ClickCommand()
+	command := target.ClickCommandForPlatform("darwin")
 
 	for _, want := range []string{"com.apple.Terminal", "/dev/ttys123", "set selected of aTab to true", "set index of aWindow to 1"} {
 		if !strings.Contains(command, want) {

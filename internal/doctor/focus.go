@@ -32,6 +32,9 @@ func RunFocus(w io.Writer) int {
 		Notification: notify.DiagnoseFocus(clickCommand),
 	}
 	WriteFocusReport(w, report)
+	if runtime.GOOS == "linux" {
+		writeLinuxDiagnostics(w, detectLinuxDiagnostics())
+	}
 	return 0
 }
 

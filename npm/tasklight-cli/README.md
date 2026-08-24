@@ -95,6 +95,8 @@ sudo dnf install libnotify
 sudo pacman -S libnotify
 ```
 
+Linux notifications are informational by default. Inside tmux, `TASKLIGHT_LINUX_ACTIONS=1` enables a best-effort **Select tmux target** action when `notify-send` and the notification daemon advertise action support. Tasklight does not invoke optional X11 window-control tools. Run `tasklight doctor` for desktop, D-Bus, notification-service, action, optional-tool, and tmux diagnostics; use `tasklight doctor --focus` for the generated tmux target details.
+
 ## Development
 
 From the Tasklight repository root:

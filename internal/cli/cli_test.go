@@ -389,7 +389,10 @@ func TestExecuteRunAddsFocusTargetToNotification(t *testing.T) {
 		if opts.ActivateApp != "Terminal" {
 			t.Fatalf("ActivateApp = %q, want Terminal", opts.ActivateApp)
 		}
-		return session.FocusTarget{ActivateApp: "com.apple.Terminal"}
+		return session.FocusTarget{
+			ActivateApp: "com.apple.Terminal",
+			Tmux:        &session.TmuxTarget{PaneID: "%1"},
+		}
 	}
 	t.Cleanup(func() { detectFocusTarget = oldDetectFocusTarget })
 
