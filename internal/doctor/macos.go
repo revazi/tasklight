@@ -88,9 +88,13 @@ func macOSSignatureDescription(output string) string {
 		description = "valid ad hoc signature"
 	} else {
 		for _, line := range strings.Split(output, "\n") {
-			if authority, ok := strings.CutPrefix(strings.TrimSpace(line), "Authority="); ok && authority != "" {
-				description = fmt.Sprintf("valid Developer ID signature (%s)", authority)
-				break
+			line = strings.TrimSpace(line)
+			if strings.HasPrefix(line, "Authority=") {
+				authority := strings.TrimPrefix(line, "Authority=")
+				if authority != "" {
+					description = fmt.Sprintf("valid Developer ID signature (%s)", authority)
+					break
+				}
 			}
 		}
 	}
