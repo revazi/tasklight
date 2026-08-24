@@ -150,3 +150,33 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
+
+  verify-published-release:
+    name: Verify npm and GitHub release agreement
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: github-release
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Require matching published versions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          expected_version="${GITHUB_REF_NAME#v}"
+          published_version=""
+          for attempt in 1 2 3 4 5 6; do
+            published_version="$(npm view @tasklight/cli version 2>/dev/null || true)"
+            [[ "$published_version" == "$expected_version" ]] && break
+            sleep 10
+          done
+          [[ "$published_version" == "$expected_version" ]] || {
+            echo "npm latest is $published_version; expected $expected_version" >&2
+            exit 1
+          }
+          release_tag="$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)"
+          [[ "$release_tag" == "$GITHUB_REF_NAME" ]] || {
+            echo "GitHub release tag is $release_tag; expected $GITHUB_REF_NAME" >&2
+            exit 1
+          }

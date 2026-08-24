@@ -48,7 +48,11 @@ tasklight doctor
 brew test revazi/tap/tasklight
 ```
 
-The Git tag, GitHub release, npm `latest`, formula version, and formula source URL must all agree before announcing a release.
+The Git tag, GitHub release, npm `latest`, formula version, and formula source URL must all agree before announcing a release. After updating the tap, run:
+
+```bash
+./scripts/verify-release-state.sh X.Y.Z
+```
 
 ## Direct downloads and install scripts
 
