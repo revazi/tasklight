@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Tasklight monochrome mark</title>
+  <desc id="desc">A terminal prompt with a notification beacon.</desc>
+  <g transform="translate(-70.5 90)">
+    <g transform="translate(0 46)">
+      <path d="M268 334 470 512 268 690" fill="none" stroke="currentColor" stroke-width="76" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M502 690h164" fill="none" stroke="currentColor" stroke-width="76" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(0 -45)">
+      <circle cx="746" cy="304" r="60" fill="currentColor"/>
+      <g fill="none" stroke="currentColor" stroke-width="34" stroke-linecap="round">
+        <path d="M746 186v-54"/>
+        <path d="m830 220 39-39"/>
+        <path d="M864 304h54"/>
+      </g>
+    </g>
+  </g>
+</svg>
