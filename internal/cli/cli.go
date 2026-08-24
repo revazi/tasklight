@@ -6,8 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
+	"sync"
 	"time"
+	"unicode"
 
 	"github.com/revazi/tasklight/internal/doctor"
 	"github.com/revazi/tasklight/internal/notify"
@@ -20,6 +23,7 @@ type runOptions struct {
 	cwd         string
 	activateApp string
 	idle        time.Duration
+	match       *regexp.Regexp
 }
 
 type notifyOptions struct {
@@ -82,6 +86,15 @@ func executeRun(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writ
 	}
 
 	focusTarget := detectFocusTarget(session.DetectOptions{ActivateApp: opts.activateApp})
+	var notificationMu sync.Mutex
+	sendNotification := func(notification notify.Notification) error {
+		if notifier == nil {
+			return nil
+		}
+		notificationMu.Lock()
+		defer notificationMu.Unlock()
+		return notifier.Notify(notification)
+	}
 
 	runOpts := runner.Options{
 		Name:    opts.name,
@@ -94,8 +107,16 @@ func executeRun(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writ
 	if opts.idle > 0 && notifier != nil {
 		runOpts.IdleTimeout = opts.idle
 		runOpts.OnIdle = func(event runner.IdleEvent) {
-			if err := notifier.Notify(notificationForIdle(event, focusTarget)); err != nil {
+			if err := sendNotification(notificationForIdle(event, focusTarget)); err != nil {
 				fmt.Fprintf(stderr, "tasklight: warning: idle notification failed: %v\n", err)
+			}
+		}
+	}
+	if opts.match != nil && notifier != nil {
+		runOpts.MatchPattern = opts.match
+		runOpts.OnMatch = func(event runner.MatchEvent) {
+			if err := sendNotification(notificationForMatch(event, focusTarget)); err != nil {
+				fmt.Fprintf(stderr, "tasklight: warning: match notification failed: %v\n", err)
 			}
 		}
 	}
@@ -107,7 +128,7 @@ func executeRun(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writ
 	}
 
 	if notifier != nil {
-		if err := notifier.Notify(notificationForResult(result, focusTarget)); err != nil {
+		if err := sendNotification(notificationForResult(result, focusTarget)); err != nil {
 			fmt.Fprintf(stderr, "tasklight: warning: notification failed: %v\n", err)
 		}
 	}
@@ -171,6 +192,36 @@ func executeNotify(args []string, stdout io.Writer, stderr io.Writer, notifier n
 	}
 
 	return 0
+}
+
+func notificationForMatch(event runner.MatchEvent, focusTarget session.FocusTarget) notify.Notification {
+	return notify.Notification{
+		Title:        "Tasklight",
+		Subtitle:     fmt.Sprintf("👀 %s needs attention", event.Name),
+		Message:      fmt.Sprintf("Matched %s: %s", event.Stream, conciseOutputLine(event.Line)),
+		ActivateApp:  focusTarget.ActivateApp,
+		ClickCommand: focusTarget.ClickCommand(),
+	}
+}
+
+func conciseOutputLine(line string) string {
+	sanitized := strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return ' '
+		}
+		return r
+	}, line)
+	sanitized = strings.Join(strings.Fields(sanitized), " ")
+	if sanitized == "" {
+		return "(empty line)"
+	}
+
+	const maxRunes = 160
+	runes := []rune(sanitized)
+	if len(runes) > maxRunes {
+		return string(runes[:maxRunes]) + "…"
+	}
+	return sanitized
 }
 
 func notificationForIdle(event runner.IdleEvent, focusTarget session.FocusTarget) notify.Notification {
@@ -253,10 +304,12 @@ func parseRunArgs(args []string) (runOptions, []string, bool, error) {
 	fs.SetOutput(io.Discard)
 
 	var opts runOptions
+	var matchPattern string
 	fs.StringVar(&opts.name, "name", "", "human-readable task name")
 	fs.StringVar(&opts.cwd, "cwd", "", "working directory for the command")
 	fs.StringVar(&opts.activateApp, "activate-app", "", "app name or bundle ID to activate when clicking the notification")
 	fs.DurationVar(&opts.idle, "idle", 0, "notify after this duration without stdout/stderr output")
+	fs.StringVar(&matchPattern, "match", "", "notify when an output line matches this Go regexp")
 
 	if err := fs.Parse(flagArgs); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -268,13 +321,24 @@ func parseRunArgs(args []string) (runOptions, []string, bool, error) {
 		return runOptions{}, nil, false, fmt.Errorf("unexpected argument before --: %s", strings.Join(fs.Args(), " "))
 	}
 	idleSet := false
+	matchSet := false
 	fs.Visit(func(visited *flag.Flag) {
-		if visited.Name == "idle" {
+		switch visited.Name {
+		case "idle":
 			idleSet = true
+		case "match":
+			matchSet = true
 		}
 	})
 	if idleSet && opts.idle <= 0 {
 		return runOptions{}, nil, false, errors.New("--idle must be greater than zero")
+	}
+	if matchSet {
+		compiled, err := regexp.Compile(matchPattern)
+		if err != nil {
+			return runOptions{}, nil, false, fmt.Errorf("invalid --match regexp: %w", err)
+		}
+		opts.match = compiled
 	}
 
 	return opts, command, false, nil
@@ -404,11 +468,13 @@ Options:
   --cwd string            Working directory for the command
   --activate-app string   App name or bundle ID to activate when clicking the notification
   --idle duration         Notify after this duration without stdout/stderr output
+  --match regexp          Notify when an output line matches this Go regexp
   -h, --help              Show this help
 
 Examples:
   tasklight run -- pnpm test
   tasklight run --idle 5m -- pi "continue implementation"
+  tasklight run --match 'approve|waiting|failed' -- your-agent
   tasklight run -- sh -c 'exit 42'
   tasklight run --cwd frontend -- pnpm build
 `)

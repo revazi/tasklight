@@ -6,6 +6,7 @@
 
 - `tasklight doctor --focus` diagnostics for notification providers, terminal/tmux targets, generated focus actions, and debug log paths.
 - `tasklight run --idle <duration>` notifications for running tasks that stop producing stdout or stderr.
+- `tasklight run --match <regexp>` attention notifications for matching stdout or stderr lines.
 
 ## [0.1.1] - 2026-08-20
 
