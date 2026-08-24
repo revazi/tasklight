@@ -4,7 +4,12 @@ Tasklight is a local developer tool. It runs commands you explicitly ask it to r
 
 ## Supported versions
 
-Tasklight is pre-1.0. Security fixes will target the latest commit/release unless otherwise stated.
+Tasklight is pre-1.0. Security fixes target the current `main` branch and latest release unless otherwise stated.
+
+| Version | Security support |
+| --- | --- |
+| Current `main` and latest release | Supported |
+| Older pre-1.0 releases | No routine backports; critical fixes may be backported when practical |
 
 ## Reporting a vulnerability
 

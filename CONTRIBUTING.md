@@ -4,6 +4,26 @@ Thanks for your interest in Tasklight.
 
 Tasklight is early-stage. The main priority is keeping the CLI small, predictable, and safe.
 
+## Maintenance and review policy
+
+Tasklight is actively maintained as a pre-1.0, single-maintainer project.
+
+### Triage and support
+
+- Public bug reports are triaged on a best-effort basis, with an initial acknowledgement target of 30 days. Reproducible regressions and supported-platform breakage take priority over enhancements.
+- Private vulnerability reports follow the process and 14-day initial response target in [SECURITY.md](SECURITY.md).
+- The supported line is the latest release and current `main`. Pre-1.0 releases may make breaking changes, and older releases do not receive routine backports. A critical security fix may be backported when practical.
+- Supported release platforms are macOS and Linux on arm64 and amd64. Other source builds are community-supported unless documented otherwise.
+- If active maintenance stops, the maintainer will update the repository status or archive the repository rather than continuing to imply active support.
+
+### Change control
+
+- Changes to `main` go through pull requests. Branch protection is enforced for administrators, requires branches to be current, and blocks merging until configured CI and CodeQL checks pass. Direct pushes, force pushes, and branch deletion are blocked.
+- External contributions receive maintainer review before merge. Review considers behavior, tests, security boundaries, platform impact, compatibility, and documentation.
+- Maintainer-authored changes should seek independent human review when available for security fixes, release/publishing workflows, GitHub token permissions, shell-command construction, and native helper changes.
+- Because requiring one approval would deadlock a single-maintainer repository, routine maintainer-authored pull requests may merge without an approving review after all required checks pass. Automated checks are a merge gate, not a claim of independent human review, and sham or automated approvals are not used to improve metrics.
+- Pull requests are normally squash-merged after their validation and review requirements are satisfied. Material review findings should be resolved or explicitly documented before merge.
+
 ## Development setup
 
 Requirements:
