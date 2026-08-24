@@ -84,7 +84,7 @@ codesign --force --sign - --options runtime --timestamp=none "$APP"
 codesign --verify --deep --strict "$APP"
 
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
-if [[ -x "$LSREGISTER" ]]; then
+if [[ -x "$LSREGISTER" && "${TASKLIGHT_SKIP_REGISTER:-}" != "1" ]]; then
   "$LSREGISTER" -f "$APP" >/dev/null
 fi
 
