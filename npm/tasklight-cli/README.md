@@ -23,10 +23,13 @@ tasklight --version
 tasklight doctor
 tasklight run -- pnpm test
 tasklight run --idle 5m -- your-agent "continue implementation"
+tasklight run --match 'approve|waiting|failed' -- your-agent "implement feature"
 tasklight notify --subtitle "✅ Done" --message "Finished"
 ```
 
 `--idle` sends one notification when a running command produces no stdout or stderr for the configured duration. Output resets the timer and re-arms detection without stopping the command.
+
+`--match` accepts a Go regular expression and sends one attention notification for the first matching stdout or stderr line. Invalid expressions fail before the command starts.
 
 ## Platform support
 

@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"syscall"
 	"time"
 )
@@ -15,19 +16,28 @@ import (
 var ErrMissingCommand = errors.New("missing command")
 
 type Options struct {
-	Name        string
-	Command     []string
-	Cwd         string
-	Stdin       io.Reader
-	Stdout      io.Writer
-	Stderr      io.Writer
-	IdleTimeout time.Duration
-	OnIdle      func(IdleEvent)
+	Name         string
+	Command      []string
+	Cwd          string
+	Stdin        io.Reader
+	Stdout       io.Writer
+	Stderr       io.Writer
+	IdleTimeout  time.Duration
+	OnIdle       func(IdleEvent)
+	MatchPattern *regexp.Regexp
+	OnMatch      func(MatchEvent)
 }
 
 type IdleEvent struct {
 	Name    string
 	IdleFor time.Duration
+}
+
+type MatchEvent struct {
+	Name    string
+	Pattern string
+	Stream  string
+	Line    string
 }
 
 type RunResult struct {
@@ -70,6 +80,16 @@ func Run(ctx context.Context, opts Options) RunResult {
 		stdout = activityWriter{writer: stdout, touch: idle.touch}
 		stderr = activityWriter{writer: stderr, touch: idle.touch}
 	}
+
+	var matchWriters []*lineMatchWriter
+	if opts.MatchPattern != nil && opts.OnMatch != nil {
+		sink := &matchSink{onMatch: opts.OnMatch}
+		stdoutMatcher := &lineMatchWriter{writer: stdout, stream: "stdout", name: result.Name, pattern: opts.MatchPattern, sink: sink}
+		stderrMatcher := &lineMatchWriter{writer: stderr, stream: "stderr", name: result.Name, pattern: opts.MatchPattern, sink: sink}
+		stdout = stdoutMatcher
+		stderr = stderrMatcher
+		matchWriters = []*lineMatchWriter{stdoutMatcher, stderrMatcher}
+	}
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
@@ -104,6 +124,9 @@ func Run(ctx context.Context, opts Options) RunResult {
 	err := cmd.Wait()
 	if idle != nil {
 		idle.close()
+	}
+	for _, writer := range matchWriters {
+		writer.flush()
 	}
 	close(done)
 

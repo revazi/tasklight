@@ -55,6 +55,7 @@ Implemented:
 - `--name` for readable notification names
 - `--cwd` for running from another directory
 - `--idle 5m` notifications when a running task stops producing output
+- `--match 'approve|waiting|failed'` notifications when output needs attention
 - `tasklight notify` for direct script/integration notifications
 - clean integration boundary: Tasklight stays a generic CLI; integrations call it from separate packages
 - macOS notifications via bundled native `Tasklight.app`, with `terminal-notifier`/`osascript` fallbacks
@@ -66,7 +67,6 @@ Implemented:
 
 Planned:
 
-- output match detection, for example `--match "approve"`
 - deeper terminal/window focus support
 - config files
 
@@ -158,6 +158,14 @@ tasklight run --idle 5m -- your-agent "continue implementation"
 
 Tasklight sends one idle notification per quiet period. Output on stdout or stderr resets the timer and allows a later idle notification; the command keeps running throughout.
 
+Notify when stdout or stderr output matches a Go regular expression:
+
+```bash
+tasklight run --match 'approve|waiting|failed' -- your-agent "implement feature"
+```
+
+The regexp is validated before the command starts. Matching is evaluated as output arrives, including interactive prompts without a trailing newline. Tasklight includes a short, control-character-stripped excerpt around the match and sends only the first match notification for each command invocation.
+
 Send a direct notification:
 
 ```bash
@@ -189,8 +197,8 @@ tasklight run --cwd backend --name "Django tests" -- python manage.py test
 # Docker command
 tasklight run --name "Docker build" -- docker build .
 
-# Coding-agent task, with stuck-output detection
-tasklight run --name "Agent task" --idle 5m -- your-agent "fix this failing test"
+# Coding-agent task, with stuck-output and attention detection
+tasklight run --name "Agent task" --idle 5m --match 'approve|waiting|failed' -- your-agent "fix this failing test"
 
 # Direct notification from a script or integration
 tasklight notify --title "Deploy" --subtitle "✅ Task finished" --message "Updated production assets."
@@ -312,6 +320,7 @@ tasklight doctor [--focus]
 --cwd string            Working directory for the command
 --activate-app string   App name or bundle ID to activate when clicking the notification
 --idle duration         Notify after this duration without stdout/stderr output
+--match regexp          Notify when an output line matches this Go regexp
 -h, --help              Show help
 ```
 
@@ -378,7 +387,6 @@ make package-smoke
 
 Near-term:
 
-- `--match "text"` to notify when output needs attention
 - improved notification provider selection
 
 Later:

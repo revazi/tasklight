@@ -122,6 +122,118 @@ func TestExecuteRunIdleNotification(t *testing.T) {
 	}
 }
 
+func TestExecuteRunMatchNotifications(t *testing.T) {
+	tests := []struct {
+		name       string
+		command    string
+		wantStream string
+		wantLine   string
+		wantStdout string
+		wantStderr string
+	}{
+		{
+			name:       "stdout",
+			command:    "printf 'please approve\\nplease approve\\n'",
+			wantStream: "stdout",
+			wantLine:   "please approve",
+			wantStdout: "please approve\nplease approve\n",
+		},
+		{
+			name:       "stderr",
+			command:    "printf 'still waiting\\n' >&2",
+			wantStream: "stderr",
+			wantLine:   "still waiting",
+			wantStderr: "still waiting\n",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var stdout bytes.Buffer
+			var stderr bytes.Buffer
+			notifier := &recordingNotifier{}
+
+			code := ExecuteWithNotifier(
+				[]string{"run", "--name", "Agent task", "--match", "approve|waiting", "--", "/bin/sh", "-c", test.command},
+				strings.NewReader(""),
+				&stdout,
+				&stderr,
+				notifier,
+			)
+
+			if code != 0 {
+				t.Fatalf("code = %d, want 0; stderr=%q", code, stderr.String())
+			}
+			if stdout.String() != test.wantStdout || stderr.String() != test.wantStderr {
+				t.Fatalf("stdout = %q, stderr = %q; output was not preserved", stdout.String(), stderr.String())
+			}
+			assertNotificationCount(t, notifier, 2)
+			matched := notifier.notifications[0]
+			if matched.Subtitle != "👀 Agent task needs attention" {
+				t.Fatalf("match subtitle = %q, want attention message", matched.Subtitle)
+			}
+			if !strings.Contains(matched.Message, "Matched "+test.wantStream+": "+test.wantLine) {
+				t.Fatalf("match message = %q, want stream and matching line", matched.Message)
+			}
+		})
+	}
+}
+
+func TestExecuteRunMatchIgnoresNonmatchingOutput(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	notifier := &recordingNotifier{}
+
+	code := ExecuteWithNotifier(
+		[]string{"run", "--match", "approve|waiting", "--", "/bin/sh", "-c", "printf 'all clear\\n'"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		notifier,
+	)
+
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+	assertNotificationCount(t, notifier, 1)
+	if !strings.Contains(notifier.notifications[0].Subtitle, "finished") {
+		t.Fatalf("notification = %#v, want completion only", notifier.notifications[0])
+	}
+}
+
+func TestExecuteRunRejectsInvalidMatchBeforeStarting(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	notifier := &recordingNotifier{}
+
+	code := ExecuteWithNotifier(
+		[]string{"run", "--match", "[", "--", "/bin/sh", "-c", "printf SHOULD_NOT_RUN"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		notifier,
+	)
+
+	if code != 2 {
+		t.Fatalf("code = %d, want 2", code)
+	}
+	if stdout.Len() != 0 || !strings.Contains(stderr.String(), "invalid --match regexp") {
+		t.Fatalf("stdout = %q, stderr = %q; command should not start", stdout.String(), stderr.String())
+	}
+	assertNotificationCount(t, notifier, 0)
+}
+
+func TestConciseOutputLine(t *testing.T) {
+	input := "  waiting\tfor\napproval " + strings.Repeat("x", 200)
+	got := conciseOutputLine(input)
+	if strings.ContainsAny(got, "\t\n") {
+		t.Fatalf("conciseOutputLine() = %q, want control characters removed", got)
+	}
+	if !strings.HasPrefix(got, "waiting for approval") || !strings.HasSuffix(got, "…") {
+		t.Fatalf("conciseOutputLine() = %q, want normalized truncated line", got)
+	}
+}
+
 func TestParseRunIdleDurations(t *testing.T) {
 	for _, value := range []string{"30s", "5m", "1h"} {
 		opts, command, help, err := parseRunArgs([]string{"--idle", value, "--", "echo"})
