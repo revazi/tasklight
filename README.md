@@ -54,20 +54,21 @@ Implemented:
 - child exit-code preservation
 - `--name` for readable notification names
 - `--cwd` for running from another directory
+- `--idle 5m` notifications when a running task stops producing output
 - `tasklight notify` for direct script/integration notifications
 - clean integration boundary: Tasklight stays a generic CLI; integrations call it from separate packages
 - macOS notifications via bundled native `Tasklight.app`, with `terminal-notifier`/`osascript` fallbacks
 - Linux notifications via `notify-send`
 - iTerm2 + tmux click-to-return
 - best-effort app activation elsewhere
+- detailed click-to-focus diagnostics with `tasklight doctor --focus`
+- approval-gated npm provenance and GitHub release automation
 
 Planned:
 
-- idle/stuck detection, for example `--idle 5m`
 - output match detection, for example `--match "approve"`
 - deeper terminal/window focus support
 - config files
-- release automation
 
 ## Installation
 
@@ -149,6 +150,14 @@ Run from another directory:
 tasklight run --cwd frontend -- pnpm build
 ```
 
+Notify when a command is still running but has produced no output for five minutes:
+
+```bash
+tasklight run --idle 5m -- your-agent "continue implementation"
+```
+
+Tasklight sends one idle notification per quiet period. Output on stdout or stderr resets the timer and allows a later idle notification; the command keeps running throughout.
+
 Send a direct notification:
 
 ```bash
@@ -180,8 +189,8 @@ tasklight run --cwd backend --name "Django tests" -- python manage.py test
 # Docker command
 tasklight run --name "Docker build" -- docker build .
 
-# Coding-agent task
-tasklight run --name "Agent task" -- your-agent "fix this failing test"
+# Coding-agent task, with stuck-output detection
+tasklight run --name "Agent task" --idle 5m -- your-agent "fix this failing test"
 
 # Direct notification from a script or integration
 tasklight notify --title "Deploy" --subtitle "✅ Task finished" --message "Updated production assets."
@@ -302,6 +311,7 @@ tasklight doctor [--focus]
 --name string           Human-readable task name, used by notifications
 --cwd string            Working directory for the command
 --activate-app string   App name or bundle ID to activate when clicking the notification
+--idle duration         Notify after this duration without stdout/stderr output
 -h, --help              Show help
 ```
 
@@ -368,7 +378,6 @@ make package-smoke
 
 Near-term:
 
-- `--idle 5m` to notify when a task stops producing output
 - `--match "text"` to notify when output needs attention
 - improved notification provider selection
 

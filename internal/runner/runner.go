@@ -15,12 +15,19 @@ import (
 var ErrMissingCommand = errors.New("missing command")
 
 type Options struct {
+	Name        string
+	Command     []string
+	Cwd         string
+	Stdin       io.Reader
+	Stdout      io.Writer
+	Stderr      io.Writer
+	IdleTimeout time.Duration
+	OnIdle      func(IdleEvent)
+}
+
+type IdleEvent struct {
 	Name    string
-	Command []string
-	Cwd     string
-	Stdin   io.Reader
-	Stdout  io.Writer
-	Stderr  io.Writer
+	IdleFor time.Duration
 }
 
 type RunResult struct {
@@ -52,8 +59,19 @@ func Run(ctx context.Context, opts Options) RunResult {
 	cmd := exec.CommandContext(ctx, opts.Command[0], opts.Command[1:]...)
 	cmd.Dir = opts.Cwd
 	cmd.Stdin = opts.Stdin
-	cmd.Stdout = writerOrDiscard(opts.Stdout)
-	cmd.Stderr = writerOrDiscard(opts.Stderr)
+
+	stdout := writerOrDiscard(opts.Stdout)
+	stderr := writerOrDiscard(opts.Stderr)
+	var idle *idleMonitor
+	if opts.IdleTimeout > 0 && opts.OnIdle != nil {
+		idle = newIdleMonitor(opts.IdleTimeout, func() {
+			opts.OnIdle(IdleEvent{Name: result.Name, IdleFor: opts.IdleTimeout})
+		})
+		stdout = activityWriter{writer: stdout, touch: idle.touch}
+		stderr = activityWriter{writer: stderr, touch: idle.touch}
+	}
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	if err := cmd.Start(); err != nil {
 		result.EndedAt = time.Now()
@@ -62,6 +80,9 @@ func Run(ctx context.Context, opts Options) RunResult {
 		return result
 	}
 	result.Started = true
+	if idle != nil {
+		idle.start(newSystemIdleTimer)
+	}
 
 	signals := make(chan os.Signal, 1)
 	done := make(chan struct{})
@@ -81,6 +102,9 @@ func Run(ctx context.Context, opts Options) RunResult {
 	}()
 
 	err := cmd.Wait()
+	if idle != nil {
+		idle.close()
+	}
 	close(done)
 
 	result.EndedAt = time.Now()

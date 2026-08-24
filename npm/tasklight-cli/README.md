@@ -22,8 +22,11 @@ Then:
 tasklight --version
 tasklight doctor
 tasklight run -- pnpm test
+tasklight run --idle 5m -- your-agent "continue implementation"
 tasklight notify --subtitle "✅ Done" --message "Finished"
 ```
+
+`--idle` sends one notification when a running command produces no stdout or stderr for the configured duration. Output resets the timer and re-arms detection without stopping the command.
 
 ## Platform support
 
