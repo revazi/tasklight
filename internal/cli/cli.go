@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode"
 
+	taskconfig "github.com/revazi/tasklight/internal/config"
 	"github.com/revazi/tasklight/internal/doctor"
 	"github.com/revazi/tasklight/internal/notify"
 	"github.com/revazi/tasklight/internal/runner"
@@ -24,6 +25,7 @@ type runOptions struct {
 	activateApp string
 	idle        time.Duration
 	match       *regexp.Regexp
+	sound       bool
 }
 
 type notifyOptions struct {
@@ -39,6 +41,7 @@ var Version = "dev"
 
 var (
 	detectFocusTarget = session.Detect
+	loadConfig        = taskconfig.Load
 	runDoctor         = doctor.Run
 	runFocusDoctor    = doctor.RunFocus
 )
@@ -74,7 +77,16 @@ func ExecuteWithNotifier(args []string, stdin io.Reader, stdout io.Writer, stder
 }
 
 func executeRun(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, notifier notify.Notifier) int {
-	opts, command, help, err := parseRunArgs(args)
+	if hasHelpFlag(args) {
+		printRunHelp(stdout)
+		return 0
+	}
+	configuration, err := loadConfig()
+	if err != nil {
+		fmt.Fprintf(stderr, "tasklight run: configuration error: %v\n", err)
+		return 2
+	}
+	opts, command, help, err := parseRunArgs(args, configuration.Run)
 	if help {
 		printRunHelp(stdout)
 		return 0
@@ -107,7 +119,7 @@ func executeRun(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writ
 	if opts.idle > 0 && notifier != nil {
 		runOpts.IdleTimeout = opts.idle
 		runOpts.OnIdle = func(event runner.IdleEvent) {
-			if err := sendNotification(notificationForIdle(event, focusTarget)); err != nil {
+			if err := sendNotification(notificationForIdle(event, focusTarget, opts.sound)); err != nil {
 				fmt.Fprintf(stderr, "tasklight: warning: idle notification failed: %v\n", err)
 			}
 		}
@@ -115,7 +127,7 @@ func executeRun(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writ
 	if opts.match != nil && notifier != nil {
 		runOpts.MatchPattern = opts.match
 		runOpts.OnMatch = func(event runner.MatchEvent) {
-			if err := sendNotification(notificationForMatch(event, focusTarget)); err != nil {
+			if err := sendNotification(notificationForMatch(event, focusTarget, opts.sound)); err != nil {
 				fmt.Fprintf(stderr, "tasklight: warning: match notification failed: %v\n", err)
 			}
 		}
@@ -128,7 +140,7 @@ func executeRun(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writ
 	}
 
 	if notifier != nil {
-		if err := sendNotification(notificationForResult(result, focusTarget)); err != nil {
+		if err := sendNotification(notificationForResult(result, focusTarget, opts.sound)); err != nil {
 			fmt.Fprintf(stderr, "tasklight: warning: notification failed: %v\n", err)
 		}
 	}
@@ -162,7 +174,16 @@ func executeDoctor(args []string, stdout io.Writer, stderr io.Writer) int {
 }
 
 func executeNotify(args []string, stdout io.Writer, stderr io.Writer, notifier notify.Notifier) int {
-	opts, help, err := parseNotifyArgs(args)
+	if hasHelpFlag(args) {
+		printNotifyHelp(stdout)
+		return 0
+	}
+	configuration, err := loadConfig()
+	if err != nil {
+		fmt.Fprintf(stderr, "tasklight notify: configuration error: %v\n", err)
+		return 2
+	}
+	opts, help, err := parseNotifyArgs(args, configuration.Notify)
 	if help {
 		printNotifyHelp(stdout)
 		return 0
@@ -194,11 +215,12 @@ func executeNotify(args []string, stdout io.Writer, stderr io.Writer, notifier n
 	return 0
 }
 
-func notificationForMatch(event runner.MatchEvent, focusTarget session.FocusTarget) notify.Notification {
+func notificationForMatch(event runner.MatchEvent, focusTarget session.FocusTarget, sound bool) notify.Notification {
 	return notify.Notification{
 		Title:        "Tasklight",
 		Subtitle:     fmt.Sprintf("👀 %s needs attention", event.Name),
 		Message:      fmt.Sprintf("Matched %s: %s", event.Stream, conciseOutputLine(event.Line)),
+		Sound:        sound,
 		ActivateApp:  focusTarget.ActivateApp,
 		ClickCommand: focusTarget.ClickCommand(),
 	}
@@ -224,20 +246,22 @@ func conciseOutputLine(line string) string {
 	return sanitized
 }
 
-func notificationForIdle(event runner.IdleEvent, focusTarget session.FocusTarget) notify.Notification {
+func notificationForIdle(event runner.IdleEvent, focusTarget session.FocusTarget, sound bool) notify.Notification {
 	return notify.Notification{
 		Title:        "Tasklight",
 		Subtitle:     fmt.Sprintf("⚠️ %s is still running but idle", event.Name),
 		Message:      fmt.Sprintf("No output for %s", formatDuration(event.IdleFor)),
+		Sound:        sound,
 		ActivateApp:  focusTarget.ActivateApp,
 		ClickCommand: focusTarget.ClickCommand(),
 	}
 }
 
-func notificationForResult(result runner.RunResult, focusTarget session.FocusTarget) notify.Notification {
+func notificationForResult(result runner.RunResult, focusTarget session.FocusTarget, sound bool) notify.Notification {
 	duration := formatDuration(result.EndedAt.Sub(result.StartedAt))
 	notification := notify.Notification{
 		Title:        "Tasklight",
+		Sound:        sound,
 		ActivateApp:  focusTarget.ActivateApp,
 		ClickCommand: focusTarget.ClickCommand(),
 	}
@@ -281,7 +305,7 @@ func formatDuration(duration time.Duration) string {
 	return strings.Join(parts, " ")
 }
 
-func parseRunArgs(args []string) (runOptions, []string, bool, error) {
+func parseRunArgs(args []string, defaults taskconfig.Run) (runOptions, []string, bool, error) {
 	if len(args) == 0 {
 		return runOptions{}, nil, false, errors.New("missing command; use: tasklight run -- <command>")
 	}
@@ -303,13 +327,18 @@ func parseRunArgs(args []string) (runOptions, []string, bool, error) {
 	fs := flag.NewFlagSet("run", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	var opts runOptions
-	var matchPattern string
+	opts := runOptions{
+		activateApp: defaults.ActivateApp,
+		idle:        defaults.Idle,
+		sound:       defaults.Sound,
+	}
+	matchPattern := defaults.Match
 	fs.StringVar(&opts.name, "name", "", "human-readable task name")
 	fs.StringVar(&opts.cwd, "cwd", "", "working directory for the command")
-	fs.StringVar(&opts.activateApp, "activate-app", "", "app name or bundle ID to activate when clicking the notification")
-	fs.DurationVar(&opts.idle, "idle", 0, "notify after this duration without stdout/stderr output")
-	fs.StringVar(&matchPattern, "match", "", "notify when an output line matches this Go regexp")
+	fs.StringVar(&opts.activateApp, "activate-app", opts.activateApp, "app name or bundle ID to activate when clicking the notification")
+	fs.DurationVar(&opts.idle, "idle", opts.idle, "notify after this duration without stdout/stderr output")
+	fs.StringVar(&matchPattern, "match", matchPattern, "notify when an output line matches this Go regexp")
+	fs.BoolVar(&opts.sound, "sound", opts.sound, "play the default notification sound")
 
 	if err := fs.Parse(flagArgs); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -321,7 +350,7 @@ func parseRunArgs(args []string) (runOptions, []string, bool, error) {
 		return runOptions{}, nil, false, fmt.Errorf("unexpected argument before --: %s", strings.Join(fs.Args(), " "))
 	}
 	idleSet := false
-	matchSet := false
+	matchSet := matchPattern != ""
 	fs.Visit(func(visited *flag.Flag) {
 		switch visited.Name {
 		case "idle":
@@ -344,7 +373,7 @@ func parseRunArgs(args []string) (runOptions, []string, bool, error) {
 	return opts, command, false, nil
 }
 
-func parseNotifyArgs(args []string) (notifyOptions, bool, error) {
+func parseNotifyArgs(args []string, defaults taskconfig.Notify) (notifyOptions, bool, error) {
 	if hasHelpFlag(args) {
 		return notifyOptions{}, true, nil
 	}
@@ -352,13 +381,17 @@ func parseNotifyArgs(args []string) (notifyOptions, bool, error) {
 	fs := flag.NewFlagSet("notify", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 
-	opts := notifyOptions{title: "Tasklight"}
+	opts := notifyOptions{
+		title:       "Tasklight",
+		activateApp: defaults.ActivateApp,
+		sound:       defaults.Sound,
+	}
 	fs.StringVar(&opts.title, "title", opts.title, "notification title")
 	fs.StringVar(&opts.subtitle, "subtitle", "", "notification subtitle")
 	fs.StringVar(&opts.message, "message", "", "notification body/message")
-	fs.StringVar(&opts.activateApp, "activate-app", "", "app name or bundle ID to activate when clicking the notification")
+	fs.StringVar(&opts.activateApp, "activate-app", opts.activateApp, "app name or bundle ID to activate when clicking the notification")
 	fs.StringVar(&opts.iconPath, "icon", "", "path to a notification icon image")
-	fs.BoolVar(&opts.sound, "sound", false, "play the platform's default notification sound when supported")
+	fs.BoolVar(&opts.sound, "sound", opts.sound, "play the platform's default notification sound when supported")
 
 	if err := fs.Parse(args); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -469,6 +502,7 @@ Options:
   --activate-app string   App name or bundle ID to activate when clicking the notification
   --idle duration         Notify after this duration without stdout/stderr output
   --match regexp          Notify when an output line matches this Go regexp
+  --sound                 Play the default notification sound
   -h, --help              Show this help
 
 Examples:

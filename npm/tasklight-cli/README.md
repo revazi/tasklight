@@ -31,6 +31,24 @@ tasklight notify --subtitle "✅ Done" --message "Finished"
 
 `--match` accepts a Go regular expression and sends one attention notification for the first matching stdout or stderr line. Invalid expressions fail before the command starts.
 
+## Configuration
+
+Optional defaults can be stored in `$XDG_CONFIG_HOME/tasklight/config.toml` (or `~/.config/tasklight/config.toml`) and overridden by a project-local `.tasklight.toml` and then CLI flags:
+
+```toml
+[run]
+activate_app = "iTerm2"
+sound = false
+idle = "5m"
+match = "approve|waiting|failed"
+
+[notify]
+activate_app = "iTerm2"
+sound = true
+```
+
+Invalid configuration fails before Tasklight runs the command or sends a notification.
+
 ## Platform support
 
 This package currently bundles prebuilt Tasklight binaries for:
