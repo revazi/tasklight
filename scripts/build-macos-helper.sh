@@ -11,6 +11,7 @@ MACOS="$CONTENTS/MacOS"
 RESOURCES="$CONTENTS/Resources"
 SOURCE="$ROOT/helpers/macos/TasklightNotifier/TasklightNotifier.swift"
 ICON="$ROOT/assets/brand/Tasklight.icns"
+ICON_RESOURCE="Tasklight-v2.icns"
 EXECUTABLE="$MACOS/TasklightNotifier"
 VERSION="${TASKLIGHT_VERSION:-}"
 if [[ -z "$VERSION" ]]; then
@@ -29,7 +30,7 @@ esac
 
 rm -rf "$APP"
 mkdir -p "$MACOS" "$RESOURCES"
-cp "$ICON" "$RESOURCES/Tasklight.icns"
+cp "$ICON" "$RESOURCES/$ICON_RESOURCE"
 
 cat > "$CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -43,9 +44,9 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 	<key>CFBundleExecutable</key>
 	<string>TasklightNotifier</string>
 	<key>CFBundleIconFile</key>
-	<string>Tasklight</string>
+	<string>Tasklight-v2</string>
 	<key>CFBundleIdentifier</key>
-	<string>dev.tasklight.Tasklight</string>
+	<string>dev.tasklight.notifier</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -73,7 +74,7 @@ xcrun swiftc \
   "$SOURCE"
 
 chmod 0755 "$EXECUTABLE"
-chmod 0644 "$CONTENTS/Info.plist" "$RESOURCES/Tasklight.icns"
+chmod 0644 "$CONTENTS/Info.plist" "$RESOURCES/$ICON_RESOURCE"
 
 if ! command -v codesign >/dev/null 2>&1; then
   echo "codesign is required to package the native macOS helper" >&2

@@ -4,7 +4,7 @@ The npm package includes `Tasklight.app`, a small Swift helper built from [`help
 
 ## Notification permission and registration
 
-The helper uses bundle identifier `dev.tasklight.Tasklight`. macOS owns notification authorization for that identity.
+The helper uses bundle identifier `dev.tasklight.notifier`. macOS owns notification authorization for that identity. This stable notifier identity was introduced in v0.2.1 because macOS continued serving the pre-v2 icon from the old `dev.tasklight.Tasklight` identity even after the helper, bundle version, registration, and on-disk icon had been updated. The terminal-notifier fallback uses the separate `dev.tasklight.sender.v2` identity so the native helper and fallback app cannot compete for one LaunchServices registration.
 
 Run:
 
@@ -15,7 +15,7 @@ tasklight doctor --focus
 
 On macOS, the report verifies the selected helper executable, code signature, hardened-runtime flag, quarantine state, LaunchServices registration, notification authorization, alert setting, and sound setting. The authorization check does not request permission or send a notification.
 
-If authorization is `not-determined`, send the first Tasklight notification and accept the macOS prompt. If it is `denied`, open **System Settings → Notifications → Tasklight** and enable notifications. Re-run `tasklight doctor` afterward.
+If authorization is `not-determined`, send the first Tasklight notification and accept the macOS prompt. Upgrading from v0.2.0 to v0.2.1 may show this prompt once because the cache-safe notifier identity is new. If authorization is `denied`, open **System Settings → Notifications → Tasklight** and enable notifications. Re-run `tasklight doctor` afterward.
 
 ### Stale notification icon
 
@@ -27,7 +27,7 @@ tasklight --version
 tasklight doctor
 ```
 
-Upgrade `@tasklight/cli` when a new brand release is published. The upgraded binary replaces its cached PNG by content, the fallback sender carries a new brand bundle version, and the native helper carries the package version so LaunchServices can refresh the app icon. Running an older globally installed Tasklight can restore its older embedded PNG to the same cache path. Avoid deleting system notification databases as a first step.
+Upgrade `@tasklight/cli` when a new brand release is published. The upgraded binary replaces its cached PNG by content, the fallback sender carries a new brand bundle version, and the native helper carries the package version. Brand v2 also uses new native-helper and fallback-sender bundle identities plus the `Tasklight-v2.icns` resource name so LaunchServices and iconservices cannot reuse the pre-v2 notification icon. Running an older globally installed Tasklight can restore its older embedded PNG to the same cache path. Avoid deleting system notification databases as a first step.
 
 ## Process lifecycle
 
@@ -82,9 +82,9 @@ The native log is mode `0600`, is truncated after it grows beyond 1 MiB, and rec
 
 ## Signing and notarization decision
 
-### npm distribution for v0.2.0
+### npm distribution for v0.2.x
 
-Ad hoc signing is sufficient for the helper bundled inside the npm package for v0.2.0:
+Ad hoc signing is sufficient for the helper bundled inside the npm package for v0.2.x:
 
 - The build removes extended attributes, enables the hardened runtime, ad hoc signs the final app bundle, and fails unless `codesign --verify --deep --strict` succeeds.
 - Package construction and installation are tested on macOS.

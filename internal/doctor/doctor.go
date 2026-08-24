@@ -13,7 +13,7 @@ import (
 	"github.com/revazi/tasklight/internal/session"
 )
 
-const tasklightSenderBundleID = "dev.tasklight.Tasklight"
+const tasklightSenderBundleID = "dev.tasklight.sender.v2"
 
 // Run writes environment diagnostics and returns a process exit code.
 func Run(w io.Writer) int {

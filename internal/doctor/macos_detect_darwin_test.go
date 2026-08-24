@@ -16,7 +16,7 @@ func TestDetectMacOSHelperDiagnostics(t *testing.T) {
 		commands = append(commands, name+" "+strings.Join(args, " "))
 		switch {
 		case strings.HasSuffix(name, "/TasklightNotifier"):
-			return []byte("bundle-id=dev.tasklight.Tasklight\nauthorization=authorized\nalerts=enabled\nsounds=disabled\n"), nil
+			return []byte("bundle-id=dev.tasklight.notifier\nauthorization=authorized\nalerts=enabled\nsounds=disabled\n"), nil
 		case name == "codesign" && len(args) > 0 && args[0] == "--display":
 			return []byte("Signature=adhoc\nflags=0x10002(adhoc,runtime)"), nil
 		case name == "xattr":
@@ -29,7 +29,7 @@ func TestDetectMacOSHelperDiagnostics(t *testing.T) {
 	if diagnostics.ExecutablePath != appPath+"/Contents/MacOS/TasklightNotifier" {
 		t.Fatalf("ExecutablePath = %q", diagnostics.ExecutablePath)
 	}
-	if diagnostics.BundleID != "dev.tasklight.Tasklight" || diagnostics.Authorization != "authorized" || diagnostics.Alerts != "enabled" || diagnostics.Sounds != "disabled" {
+	if diagnostics.BundleID != "dev.tasklight.notifier" || diagnostics.Authorization != "authorized" || diagnostics.Alerts != "enabled" || diagnostics.Sounds != "disabled" {
 		t.Fatalf("helper settings = %#v", diagnostics)
 	}
 	if !diagnostics.SignatureValid || !diagnostics.HardenedRuntime || diagnostics.SignatureDescription != "valid ad hoc signature, hardened runtime" {

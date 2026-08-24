@@ -7,7 +7,7 @@ A flat, high-contrast identity built around one consistent terminal-prompt and n
 These files are embedded or packaged by the Tasklight codebase:
 
 - `tasklight-app-icon-1024.png` — default notification icon embedded by `assets.go` and used by supported notification providers.
-- `Tasklight.icns` — macOS icon bundle embedded for the fallback sender app and copied into the native `Tasklight.app` helper.
+- `Tasklight.icns` — macOS icon source embedded for the fallback sender app and copied into native helpers as the cache-safe `Tasklight-v2.icns` resource.
 
 ## Repository assets
 
