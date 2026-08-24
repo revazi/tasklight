@@ -402,13 +402,16 @@ tasklight doctor [--focus]
 Requirements:
 
 - Go 1.19 or newer
-- macOS or Linux
+- macOS or Linux on arm64 or amd64 for supported release builds
 
 Common commands:
 
 ```bash
 # Full local verification
 make check
+
+# Bounded parser and command-construction fuzzing
+make fuzz-smoke
 
 # Cross-compile supported Go targets
 make cross-compile
@@ -426,6 +429,8 @@ Build and smoke-test the local npm CLI package:
 make npm-package
 make package-smoke
 ```
+
+Project policies and practices are documented in [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md), and the [OpenSSF Best Practices self-assessment](docs/OPENSSF_BEST_PRACTICES.md).
 
 ## Roadmap
 
