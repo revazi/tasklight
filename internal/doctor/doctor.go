@@ -66,6 +66,9 @@ func Run(w io.Writer) int {
 	} else {
 		warnLine(w, "bundled icon", "could not prepare cached icon")
 	}
+	if runtime.GOOS == "linux" {
+		writeLinuxDiagnostics(w, detectLinuxDiagnostics())
+	}
 
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, "Focus/session integration")

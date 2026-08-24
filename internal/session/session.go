@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -65,14 +66,20 @@ func Detect(opts DetectOptions) FocusTarget {
 }
 
 func (target FocusTarget) ClickCommand() string {
+	return target.ClickCommandForPlatform(runtime.GOOS)
+}
+
+func (target FocusTarget) ClickCommandForPlatform(goos string) string {
 	commands := make([]string, 0, 2)
 	if target.Tmux != nil {
 		if command := target.Tmux.ClickCommand(); command != "" {
 			commands = append(commands, command)
 		}
 	}
-	if command := target.FocusCommand(); command != "" {
-		commands = append(commands, command)
+	if goos == "darwin" {
+		if command := target.FocusCommand(); command != "" {
+			commands = append(commands, command)
+		}
 	}
 	return strings.Join(commands, " ; ")
 }

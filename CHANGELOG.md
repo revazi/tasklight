@@ -8,6 +8,8 @@
 - `tasklight run --idle <duration>` notifications for running tasks that stop producing stdout or stderr.
 - `tasklight run --match <regexp>` attention notifications for matching stdout or stderr lines.
 - Optional global and project-local TOML defaults for run and notification behavior.
+- Linux desktop, D-Bus notification service, action-capability, and optional focus-tool diagnostics.
+- Opt-in best-effort Linux notification actions that return to a captured tmux target.
 
 ## [0.1.1] - 2026-08-20
 

@@ -59,7 +59,7 @@ Implemented:
 - `tasklight notify` for direct script/integration notifications
 - clean integration boundary: Tasklight stays a generic CLI; integrations call it from separate packages
 - macOS notifications via bundled native `Tasklight.app`, with `terminal-notifier`/`osascript` fallbacks
-- Linux notifications via `notify-send`
+- Linux notifications via `notify-send`, with desktop/session capability diagnostics
 - iTerm2 + tmux click-to-return
 - best-effort app activation elsewhere
 - detailed click-to-focus diagnostics with `tasklight doctor --focus`
@@ -328,7 +328,24 @@ sudo dnf install libnotify
 sudo pacman -S libnotify
 ```
 
-Linux currently supports basic finish/failure notifications. Tasklight passes the bundled app icon to `notify-send`. Deep click-to-focus support is planned for later because it depends on the desktop environment, X11 vs Wayland, and terminal app support.
+Linux currently supports informational completion, failure, idle, and output-match notifications. Tasklight passes the bundled app icon to `notify-send`.
+
+Linux notification actions are disabled by default. When running inside tmux, users can explicitly enable a best-effort **Select tmux target** action if their `notify-send` and notification daemon support actions:
+
+```bash
+TASKLIGHT_LINUX_ACTIONS=1 tasklight run -- pnpm test
+```
+
+The action runs only the captured tmux client/window/pane command; it does not promise to raise or focus the terminal window. Tasklight does not silently install or invoke window-control tools. Action delivery still varies across notification daemons and GNOME/KDE versions, so this remains opt-in and best-effort. Outside tmux, Linux notifications stay informational.
+
+Run diagnostics to report the active desktop/session type, Wayland/X11 displays, D-Bus notification service, `notify-send` action capability, optional tools (`gdbus`, `wmctrl`, `xdotool`, and `busctl`), and tmux target:
+
+```bash
+tasklight doctor
+tasklight doctor --focus
+```
+
+`wmctrl` and `xdotool` are X11-oriented and are reported only as optional capabilities; Tasklight does not invoke them. Wayland compositors commonly prevent arbitrary applications from stealing focus. Linux focus remains explicit and best-effort rather than changing focus automatically without user action.
 
 ## CLI reference
 
