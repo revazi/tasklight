@@ -62,7 +62,7 @@ Windows is not packaged yet.
 
 ## macOS notifications
 
-This npm package bundles a tiny native `Tasklight.app` notification helper for proper Tasklight notification identity, custom icon support, and reliable click behavior.
+This npm package bundles a tiny native `Tasklight.app` notification helper for proper Tasklight notification identity, custom icon support, and reliable click behavior. The helper is ad hoc signed with the hardened runtime and verified during packaging; it is not represented as an Apple-notarized standalone application.
 
 If the native helper is unavailable, Tasklight can use `terminal-notifier` as an optional fallback:
 
@@ -78,7 +78,9 @@ If click-to-focus returns to the wrong terminal or tmux pane, generate a pasteab
 tasklight doctor --focus
 ```
 
-The report shows the selected provider, terminal/tmux target, generated focus action, and opt-in debug log paths.
+The report shows the selected provider, helper signature and quarantine state, notification authorization, terminal/tmux target, generated focus action, and opt-in debug log paths. If authorization is denied, enable Tasklight under **System Settings → Notifications**. Set `TASKLIGHT_FOCUS_DEBUG=1` only while reproducing a focus issue, and review generated focus logs before sharing them.
+
+See the [native macOS helper guide](https://github.com/revazi/tasklight/blob/main/docs/MACOS_HELPER.md) for lifecycle timeouts, manual checks, logging details, and the future Developer ID/notarization plan.
 
 ## Linux notification dependency
 

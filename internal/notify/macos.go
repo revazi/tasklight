@@ -296,12 +296,18 @@ func writeExecuteScript(command string) string {
 		return ""
 	}
 	scriptDir := filepath.Dir(scriptPath)
-	if err := os.MkdirAll(scriptDir, 0o755); err != nil {
+	if err := os.MkdirAll(scriptDir, 0o700); err != nil {
+		return ""
+	}
+	if err := os.Chmod(scriptDir, 0o700); err != nil {
 		return ""
 	}
 
 	content := "#!/bin/sh\n" + focusDebugPrelude(scriptDir) + command + "\n"
-	if err := os.WriteFile(scriptPath, []byte(content), 0o755); err != nil {
+	if err := os.WriteFile(scriptPath, []byte(content), 0o700); err != nil {
+		return ""
+	}
+	if err := os.Chmod(scriptPath, 0o700); err != nil {
 		return ""
 	}
 	return scriptPath
@@ -316,11 +322,11 @@ func executeScriptPath(command string) string {
 }
 
 func focusDebugPrelude(scriptDir string) string {
-	if os.Getenv("TASKLIGHT_FOCUS_DEBUG") == "" {
+	if !environmentFlagEnabled(os.Getenv("TASKLIGHT_FOCUS_DEBUG")) {
 		return ""
 	}
 	logPath := filepath.Join(scriptDir, "focus.log")
-	return "exec >> " + shellQuote(logPath) + " 2>&1\nset -x\ndate\n"
+	return "umask 077\nexec >> " + shellQuote(logPath) + " 2>&1\nset -x\ndate\n"
 }
 
 func terminalNotifierIconURL(notification Notification) string {

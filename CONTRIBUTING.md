@@ -49,7 +49,7 @@ make npm-package
 make package-smoke
 ```
 
-`make npm-package` should be run on macOS for publish-ready artifacts because the npm package includes the native macOS notification helper.
+`make npm-package` should be run on macOS for publish-ready artifacts because the npm package includes the native macOS notification helper. Each helper build validates its plist, architecture, ad hoc hardened-runtime signature, diagnostics command, and bounded timeout self-test. See [docs/MACOS_HELPER.md](docs/MACOS_HELPER.md) for the v0.2.0 signing decision and future notarization requirements.
 
 ## Release process
 

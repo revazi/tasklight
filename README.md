@@ -253,7 +253,7 @@ Check local notification/focus provider setup:
 tasklight doctor
 ```
 
-`doctor` checks platform notification providers, the native macOS helper or fallbacks, Tasklight icon setup, and tmux availability.
+`doctor` checks platform notification providers, the native macOS helper or fallbacks, Tasklight icon setup, and tmux availability. On macOS it also reports helper signing, hardened-runtime, quarantine, LaunchServices registration, and notification-authorization status.
 
 ### Troubleshooting click-to-focus
 
@@ -265,14 +265,14 @@ tasklight doctor --focus
 
 The focus report includes the detected terminal app and bundle ID, iTerm/Terminal session metadata, terminal and tmux client TTYs, tmux socket/session/window/pane data, selected notification provider, generated click command or script path, and debug log paths.
 
-Debug logs are opt-in. Set `TASKLIGHT_FOCUS_DEBUG=1` on the command that sends the notification, reproduce the click, then run the report again to locate the logs:
+Debug logs are opt-in. Set `TASKLIGHT_FOCUS_DEBUG=1` (also accepts `true`, `yes`, or `on`) on the command that sends the notification, reproduce the click, then run the report again to locate the logs:
 
 ```bash
 TASKLIGHT_FOCUS_DEBUG=1 tasklight notify --message "Focus test"
 TASKLIGHT_FOCUS_DEBUG=1 tasklight doctor --focus
 ```
 
-Review terminal and tmux names in the report before posting it publicly.
+Review terminal and tmux names and the focus execution log before posting them publicly. Values such as `0`, `false`, `no`, and `off` do not enable logging.
 
 ## Notifications
 
@@ -284,7 +284,7 @@ Tasklight bundles the app icon from `assets/brand/tasklight-app-icon-1024.png` a
 
 The built-in `osascript` fallback does not support custom icons, so Tasklight does not pass an icon there and does not show an image placeholder.
 
-For proper macOS notification identity, custom icons, and reliable click behavior, the npm package bundles a tiny native `Tasklight.app` notification helper. Source builds can create it with:
+For proper macOS notification identity, custom icons, and reliable click behavior, the npm package bundles a tiny native `Tasklight.app` notification helper. For the planned v0.2.0 npm release, the helper is ad hoc signed with the hardened runtime and verified during packaging; it is not claimed as an Apple-notarized standalone application. Source builds can create it with:
 
 ```bash
 make macos-helper
@@ -310,6 +310,8 @@ tasklight run --activate-app Cursor -- pnpm test
 Click-to-focus is currently optimized for iTerm2 + tmux. Other terminals/editors use best-effort app activation until deeper support is added.
 
 When running inside tmux, Tasklight also records the current pane and attempts to select it when the notification is clicked.
+
+If Tasklight does not appear under macOS notifications, permission is denied, a helper process remains unexpectedly, or a direct-download distribution is being considered, see the [native macOS helper packaging and troubleshooting guide](docs/MACOS_HELPER.md).
 
 ### Linux
 

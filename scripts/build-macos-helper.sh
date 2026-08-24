@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 022
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${1:-$ROOT/bin}"
@@ -11,6 +12,14 @@ RESOURCES="$CONTENTS/Resources"
 SOURCE="$ROOT/helpers/macos/TasklightNotifier/TasklightNotifier.swift"
 ICON="$ROOT/assets/brand/Tasklight.icns"
 EXECUTABLE="$MACOS/TasklightNotifier"
+VERSION="${TASKLIGHT_VERSION:-}"
+if [[ -z "$VERSION" ]]; then
+  VERSION="$(sed -nE 's/^[[:space:]]*"version":[[:space:]]*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/p' "$ROOT/npm/tasklight-cli/package.json" | head -n 1)"
+fi
+if [[ ! "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+  echo "invalid Tasklight helper version: $VERSION" >&2
+  exit 2
+fi
 
 case "$TARGET" in
   darwin-arm64) SWIFT_TARGET="arm64-apple-macosx13.0" ;;
@@ -18,10 +27,11 @@ case "$TARGET" in
   *) echo "unsupported macOS helper target: $TARGET" >&2; exit 2 ;;
 esac
 
+rm -rf "$APP"
 mkdir -p "$MACOS" "$RESOURCES"
 cp "$ICON" "$RESOURCES/Tasklight.icns"
 
-cat > "$CONTENTS/Info.plist" <<'PLIST'
+cat > "$CONTENTS/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -43,9 +53,9 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.0</string>
+	<string>$VERSION</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$VERSION</string>
 	<key>LSUIElement</key>
 	<true/>
 	<key>NSUserNotificationAlertStyle</key>
@@ -62,15 +72,22 @@ xcrun swiftc \
   -o "$EXECUTABLE" \
   "$SOURCE"
 
-chmod +x "$EXECUTABLE"
+chmod 0755 "$EXECUTABLE"
+chmod 0644 "$CONTENTS/Info.plist" "$RESOURCES/Tasklight.icns"
 
-if command -v codesign >/dev/null 2>&1; then
-  codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || true
+if ! command -v codesign >/dev/null 2>&1; then
+  echo "codesign is required to package the native macOS helper" >&2
+  exit 1
 fi
+find "$APP" -exec xattr -c {} +
+codesign --force --sign - --options runtime --timestamp=none "$APP"
+codesign --verify --deep --strict "$APP"
 
 LSREGISTER="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
 if [[ -x "$LSREGISTER" ]]; then
-  "$LSREGISTER" -f "$APP" >/dev/null 2>&1 || true
+  "$LSREGISTER" -f "$APP" >/dev/null
 fi
+
+"$ROOT/scripts/check-macos-helper.sh" "$APP" "$TARGET" "$VERSION" >/dev/null
 
 echo "$APP"

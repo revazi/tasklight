@@ -3,6 +3,7 @@ package notify
 import (
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // FocusDiagnostics describes how the selected notification provider will handle
@@ -21,7 +22,16 @@ type FocusDiagnostics struct {
 
 func newFocusDiagnostics() FocusDiagnostics {
 	return FocusDiagnostics{
-		DebugEnabled: os.Getenv("TASKLIGHT_FOCUS_DEBUG") != "",
+		DebugEnabled: environmentFlagEnabled(os.Getenv("TASKLIGHT_FOCUS_DEBUG")),
+	}
+}
+
+func environmentFlagEnabled(value string) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
 	}
 }
 

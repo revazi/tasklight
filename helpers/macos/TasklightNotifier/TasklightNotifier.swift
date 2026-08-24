@@ -2,26 +2,39 @@ import AppKit
 import Foundation
 import UserNotifications
 
+func environmentFlagEnabled(_ name: String) -> Bool {
+	guard let value = ProcessInfo.processInfo.environment[name]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else {
+		return false
+	}
+	return ["1", "true", "yes", "on"].contains(value)
+}
+
 let debugLogURL: URL? = {
-	guard ProcessInfo.processInfo.environment["TASKLIGHT_FOCUS_DEBUG"] != nil else { return nil }
+	guard environmentFlagEnabled("TASKLIGHT_FOCUS_DEBUG") else { return nil }
 	let cache = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first ?? URL(fileURLWithPath: NSTemporaryDirectory())
 	let dir = cache.appendingPathComponent("tasklight", isDirectory: true)
-	try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+	try? FileManager.default.createDirectory(
+		at: dir,
+		withIntermediateDirectories: true,
+		attributes: [.posixPermissions: 0o700]
+	)
 	return dir.appendingPathComponent("native-helper.log")
 }()
 
 func debugLog(_ message: String) {
-	guard let debugLogURL else { return }
-	let line = "\(Date()) \(message)\n"
-	if let data = line.data(using: .utf8) {
-		if FileManager.default.fileExists(atPath: debugLogURL.path), let handle = try? FileHandle(forWritingTo: debugLogURL) {
-			_ = try? handle.seekToEnd()
-			try? handle.write(contentsOf: data)
-			try? handle.close()
-		} else {
-			try? data.write(to: debugLogURL)
-		}
+	guard let debugLogURL, let data = "\(Date()) \(message)\n".data(using: .utf8) else { return }
+	let fileManager = FileManager.default
+	let attributes = try? fileManager.attributesOfItem(atPath: debugLogURL.path)
+	let size = (attributes?[.size] as? NSNumber)?.intValue ?? 0
+
+	if size > 1_048_576 || !fileManager.fileExists(atPath: debugLogURL.path) {
+		try? data.write(to: debugLogURL, options: .atomic)
+	} else if let handle = try? FileHandle(forWritingTo: debugLogURL) {
+		_ = try? handle.seekToEnd()
+		try? handle.write(contentsOf: data)
+		try? handle.close()
 	}
+	try? fileManager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: debugLogURL.path)
 }
 
 func fail(_ message: String, code: Int32 = 1) -> Never {
@@ -36,13 +49,12 @@ struct Options {
 	var message = ""
 	var clickCommand = ""
 	var sound = false
-	var timeoutSeconds: TimeInterval = 8 * 60 * 60
+	var timeoutSeconds: TimeInterval = 60 * 60
 }
 
 final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 	var fallbackClickCommand: String
 	var sound: Bool
-	var clicked = false
 
 	init(fallbackClickCommand: String = "", sound: Bool = false) {
 		self.fallbackClickCommand = fallbackClickCommand
@@ -72,7 +84,6 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 		if response.actionIdentifier == UNNotificationDefaultActionIdentifier && !command.isEmpty {
 			runShell(command)
 		}
-		clicked = true
 		completionHandler()
 		DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
 			exit(0)
@@ -142,12 +153,24 @@ func printHelp() {
 	TasklightNotifier helper
 
 	Usage:
-	  TasklightNotifier notify --title <title> --subtitle <subtitle> --message <message> [--click-command <command>] [--sound]
+	  TasklightNotifier notify --title <title> --subtitle <subtitle> --message <message> [--click-command <command>] [--sound] [--timeout <seconds>]
+	  TasklightNotifier doctor [--timeout <seconds>]
+	  TasklightNotifier self-test [--timeout <seconds>]
 	""")
 }
 
+func internalTimeout(_ args: [String], default defaultValue: TimeInterval) throws -> TimeInterval {
+	if args.count == 1 {
+		return defaultValue
+	}
+	guard args.count == 3, args[1] == "--timeout", let timeout = TimeInterval(args[2]), timeout >= 0 else {
+		throw UsageError("usage: \(args.first ?? "command") [--timeout <seconds>]")
+	}
+	return timeout
+}
+
 func runShell(_ command: String) {
-	debugLog("running click command: \(command)")
+	debugLog("running click command")
 	let process = Process()
 	process.executableURL = URL(fileURLWithPath: "/bin/sh")
 	process.arguments = ["-c", command]
@@ -177,7 +200,10 @@ func requestAuthorization(center: UNUserNotificationCenter, sound: Bool) -> Bool
 		semaphore.signal()
 	}
 
-	_ = semaphore.wait(timeout: .now() + 5)
+	if semaphore.wait(timeout: .now() + 5) == .timedOut {
+		debugLog("notification authorization request timed out")
+		return false
+	}
 	return allowed
 }
 
@@ -198,7 +224,7 @@ func sendNotification(center: UNUserNotificationCenter, options: Options) -> Boo
 	)
 
 	let semaphore = DispatchSemaphore(value: 0)
-	var ok = true
+	var ok: Bool?
 	center.add(request) { error in
 		if let error {
 			debugLog("failed to add notification: \(error)")
@@ -206,12 +232,58 @@ func sendNotification(center: UNUserNotificationCenter, options: Options) -> Boo
 			ok = false
 		} else {
 			debugLog("notification added")
+			ok = true
 		}
 		semaphore.signal()
 	}
 
-	_ = semaphore.wait(timeout: .now() + 5)
-	return ok
+	if semaphore.wait(timeout: .now() + 5) == .timedOut {
+		debugLog("adding notification timed out")
+		return false
+	}
+	return ok ?? false
+}
+
+func notificationSettingName(_ setting: UNNotificationSetting) -> String {
+	switch setting {
+	case .notSupported: return "not-supported"
+	case .disabled: return "disabled"
+	case .enabled: return "enabled"
+	@unknown default: return "unknown"
+	}
+}
+
+func authorizationStatusName(_ status: UNAuthorizationStatus) -> String {
+	switch status {
+	case .notDetermined: return "not-determined"
+	case .denied: return "denied"
+	case .authorized: return "authorized"
+	case .provisional: return "provisional"
+	case .ephemeral: return "ephemeral"
+	@unknown default: return "unknown"
+	}
+}
+
+func printNotificationDiagnostics(timeoutSeconds: TimeInterval) {
+	let center = UNUserNotificationCenter.current()
+	let semaphore = DispatchSemaphore(value: 0)
+	var settings: UNNotificationSettings?
+	center.getNotificationSettings { currentSettings in
+		settings = currentSettings
+		semaphore.signal()
+	}
+
+	print("bundle-id=\(Bundle.main.bundleIdentifier ?? "missing")")
+	if semaphore.wait(timeout: .now() + timeoutSeconds) == .timedOut || settings == nil {
+		print("authorization=unavailable")
+		print("alerts=unknown")
+		print("sounds=unknown")
+		return
+	}
+	guard let settings else { return }
+	print("authorization=\(authorizationStatusName(settings.authorizationStatus))")
+	print("alerts=\(notificationSettingName(settings.alertSetting))")
+	print("sounds=\(notificationSettingName(settings.soundSetting))")
 }
 
 func runUntilClickOrTimeout(_ timeoutSeconds: TimeInterval) {
@@ -224,7 +296,26 @@ func runUntilClickOrTimeout(_ timeoutSeconds: TimeInterval) {
 }
 
 let rawArgs = Array(CommandLine.arguments.dropFirst())
-debugLog("started args=\(rawArgs) bundle=\(Bundle.main.bundleIdentifier ?? "")")
+debugLog("started argumentCount=\(rawArgs.count) bundle=\(Bundle.main.bundleIdentifier ?? "")")
+
+if rawArgs.first == "doctor" {
+	do {
+		printNotificationDiagnostics(timeoutSeconds: try internalTimeout(rawArgs, default: 3))
+		exit(0)
+	} catch {
+		fail("\(error)", code: 2)
+	}
+}
+
+if rawArgs.first == "self-test" {
+	do {
+		runUntilClickOrTimeout(try internalTimeout(rawArgs, default: 0.05))
+		print("timeout-exit=ok")
+		exit(0)
+	} catch {
+		fail("\(error)", code: 2)
+	}
+}
 
 NSApplication.shared.setActivationPolicy(.accessory)
 let center = UNUserNotificationCenter.current()
@@ -241,7 +332,7 @@ if rawArgs.isEmpty {
 let options: Options
 do {
 	options = try parseOptions(rawArgs)
-	debugLog("parsed title=\(options.title) hasClick=\(!options.clickCommand.isEmpty)")
+	debugLog("parsed notification hasClick=\(!options.clickCommand.isEmpty) sound=\(options.sound)")
 } catch {
 	debugLog("usage error: \(error)")
 	fputs("TasklightNotifier: \(error)\n", stderr)

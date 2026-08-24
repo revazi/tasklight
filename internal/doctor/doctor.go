@@ -37,6 +37,7 @@ func Run(w io.Writer) int {
 
 		if helperPath := notify.DiagnoseFocus("").NativeHelperPath; helperPath != "" {
 			okLine(w, "native macOS helper", helperPath)
+			writeMacOSHelperDiagnostics(w, detectMacOSHelperDiagnostics(helperPath))
 		} else {
 			warnLine(w, "native macOS helper", "not bundled; falling back to terminal-notifier or osascript")
 		}
