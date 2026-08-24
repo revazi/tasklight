@@ -93,6 +93,60 @@ func TestExecuteRunPreservesFailureExitCode(t *testing.T) {
 	}
 }
 
+func TestExecuteRunIdleNotification(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	notifier := &recordingNotifier{}
+
+	code := ExecuteWithNotifier(
+		[]string{"run", "--name", "Quiet task", "--idle", "50ms", "--", "/bin/sh", "-c", "sleep 0.3"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		notifier,
+	)
+
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+	assertNotificationCount(t, notifier, 2)
+	idle := notifier.notifications[0]
+	if idle.Subtitle != "⚠️ Quiet task is still running but idle" {
+		t.Fatalf("idle subtitle = %q, want still-running message", idle.Subtitle)
+	}
+	if idle.Message != "No output for <1s" {
+		t.Fatalf("idle message = %q, want idle duration", idle.Message)
+	}
+	if !strings.Contains(notifier.notifications[1].Subtitle, "finished") {
+		t.Fatalf("final notification = %#v, want completion", notifier.notifications[1])
+	}
+}
+
+func TestParseRunIdleDurations(t *testing.T) {
+	for _, value := range []string{"30s", "5m", "1h"} {
+		opts, command, help, err := parseRunArgs([]string{"--idle", value, "--", "echo"})
+		if err != nil || help {
+			t.Fatalf("parseRunArgs(--idle %s) = help %v, err %v", value, help, err)
+		}
+		want, _ := time.ParseDuration(value)
+		if opts.idle != want {
+			t.Fatalf("idle = %s, want %s", opts.idle, want)
+		}
+		if len(command) != 1 || command[0] != "echo" {
+			t.Fatalf("command = %#v, want echo", command)
+		}
+	}
+}
+
+func TestParseRunRejectsInvalidIdle(t *testing.T) {
+	for _, value := range []string{"0s", "-1s", "later"} {
+		_, _, _, err := parseRunArgs([]string{"--idle", value, "--", "echo"})
+		if err == nil {
+			t.Fatalf("parseRunArgs(--idle %s) error = nil, want error", value)
+		}
+	}
+}
+
 func TestExecuteRunUsesCustomNameInNotification(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer

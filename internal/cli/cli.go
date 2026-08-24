@@ -19,6 +19,7 @@ type runOptions struct {
 	name        string
 	cwd         string
 	activateApp string
+	idle        time.Duration
 }
 
 type notifyOptions struct {
@@ -82,14 +83,24 @@ func executeRun(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writ
 
 	focusTarget := detectFocusTarget(session.DetectOptions{ActivateApp: opts.activateApp})
 
-	result := runner.Run(context.Background(), runner.Options{
+	runOpts := runner.Options{
 		Name:    opts.name,
 		Command: command,
 		Cwd:     opts.cwd,
 		Stdin:   stdin,
 		Stdout:  stdout,
 		Stderr:  stderr,
-	})
+	}
+	if opts.idle > 0 && notifier != nil {
+		runOpts.IdleTimeout = opts.idle
+		runOpts.OnIdle = func(event runner.IdleEvent) {
+			if err := notifier.Notify(notificationForIdle(event, focusTarget)); err != nil {
+				fmt.Fprintf(stderr, "tasklight: warning: idle notification failed: %v\n", err)
+			}
+		}
+	}
+
+	result := runner.Run(context.Background(), runOpts)
 
 	if result.Err != nil && !result.Started {
 		fmt.Fprintf(stderr, "tasklight run: failed to start %q: %v\n", command[0], result.Err)
@@ -160,6 +171,16 @@ func executeNotify(args []string, stdout io.Writer, stderr io.Writer, notifier n
 	}
 
 	return 0
+}
+
+func notificationForIdle(event runner.IdleEvent, focusTarget session.FocusTarget) notify.Notification {
+	return notify.Notification{
+		Title:        "Tasklight",
+		Subtitle:     fmt.Sprintf("⚠️ %s is still running but idle", event.Name),
+		Message:      fmt.Sprintf("No output for %s", formatDuration(event.IdleFor)),
+		ActivateApp:  focusTarget.ActivateApp,
+		ClickCommand: focusTarget.ClickCommand(),
+	}
 }
 
 func notificationForResult(result runner.RunResult, focusTarget session.FocusTarget) notify.Notification {
@@ -235,6 +256,7 @@ func parseRunArgs(args []string) (runOptions, []string, bool, error) {
 	fs.StringVar(&opts.name, "name", "", "human-readable task name")
 	fs.StringVar(&opts.cwd, "cwd", "", "working directory for the command")
 	fs.StringVar(&opts.activateApp, "activate-app", "", "app name or bundle ID to activate when clicking the notification")
+	fs.DurationVar(&opts.idle, "idle", 0, "notify after this duration without stdout/stderr output")
 
 	if err := fs.Parse(flagArgs); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -244,6 +266,15 @@ func parseRunArgs(args []string) (runOptions, []string, bool, error) {
 	}
 	if len(fs.Args()) > 0 {
 		return runOptions{}, nil, false, fmt.Errorf("unexpected argument before --: %s", strings.Join(fs.Args(), " "))
+	}
+	idleSet := false
+	fs.Visit(func(visited *flag.Flag) {
+		if visited.Name == "idle" {
+			idleSet = true
+		}
+	})
+	if idleSet && opts.idle <= 0 {
+		return runOptions{}, nil, false, errors.New("--idle must be greater than zero")
 	}
 
 	return opts, command, false, nil
@@ -372,10 +403,12 @@ Options:
   --name string           Human-readable task name, used by notifications
   --cwd string            Working directory for the command
   --activate-app string   App name or bundle ID to activate when clicking the notification
+  --idle duration         Notify after this duration without stdout/stderr output
   -h, --help              Show this help
 
 Examples:
   tasklight run -- pnpm test
+  tasklight run --idle 5m -- pi "continue implementation"
   tasklight run -- sh -c 'exit 42'
   tasklight run --cwd frontend -- pnpm build
 `)
