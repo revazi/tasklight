@@ -55,14 +55,14 @@ jobs:
         run: npm publish --dry-run --access public
 
   publish:
-    name: Publish npm package and GitHub release
+    name: Publish npm package
     if: github.event_name == 'push' && github.ref_type == 'tag'
     needs: verify
     runs-on: macos-latest
     timeout-minutes: 30
     environment: npm
     permissions:
-      contents: write
+      contents: read
       id-token: write
     steps:
       - name: Checkout
@@ -106,7 +106,16 @@ jobs:
         working-directory: npm/tasklight-cli
         run: npm publish --provenance --access public
 
-      - name: Create GitHub release
+  github-release:
+    name: Create GitHub release
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - name: Create GitHub release for verified tag
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
