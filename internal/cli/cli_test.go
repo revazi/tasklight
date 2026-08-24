@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	taskconfig "github.com/revazi/tasklight/internal/config"
 	"github.com/revazi/tasklight/internal/notify"
 	"github.com/revazi/tasklight/internal/session"
 )
@@ -17,6 +18,9 @@ import (
 func TestMain(m *testing.M) {
 	detectFocusTarget = func(session.DetectOptions) session.FocusTarget {
 		return session.FocusTarget{}
+	}
+	loadConfig = func() (taskconfig.Config, error) {
+		return taskconfig.Config{}, nil
 	}
 	os.Exit(m.Run())
 }
@@ -40,6 +44,105 @@ func TestExecuteVersion(t *testing.T) {
 	if stderr.Len() != 0 {
 		t.Fatalf("stderr = %q, want empty", stderr.String())
 	}
+}
+
+func TestParseRunArgsCLIOverridesConfig(t *testing.T) {
+	defaults := taskconfig.Run{
+		ActivateApp: "iTerm2",
+		Sound:       true,
+		Idle:        5 * time.Minute,
+		Match:       "waiting",
+	}
+
+	opts, _, _, err := parseRunArgs([]string{
+		"--activate-app", "Terminal",
+		"--sound=false",
+		"--idle", "30s",
+		"--match", "approve",
+		"--", "echo",
+	}, defaults)
+	if err != nil {
+		t.Fatalf("parseRunArgs() error = %v", err)
+	}
+	if opts.activateApp != "Terminal" || opts.sound || opts.idle != 30*time.Second || opts.match == nil || opts.match.String() != "approve" {
+		t.Fatalf("options = %#v, want CLI values to override config", opts)
+	}
+}
+
+func TestParseNotifyArgsCLIOverridesConfig(t *testing.T) {
+	defaults := taskconfig.Notify{ActivateApp: "iTerm2", Sound: true}
+
+	opts, _, err := parseNotifyArgs([]string{
+		"--message", "done",
+		"--activate-app", "Terminal",
+		"--sound=false",
+	}, defaults)
+	if err != nil {
+		t.Fatalf("parseNotifyArgs() error = %v", err)
+	}
+	if opts.activateApp != "Terminal" || opts.sound {
+		t.Fatalf("options = %#v, want CLI values to override config", opts)
+	}
+}
+
+func TestExecuteRunUsesConfigDefaults(t *testing.T) {
+	setConfigLoader(t, taskconfig.Config{
+		Run: taskconfig.Run{
+			ActivateApp: "iTerm2",
+			Sound:       true,
+			Match:       "ready",
+		},
+	}, nil)
+
+	oldDetectFocusTarget := detectFocusTarget
+	detectFocusTarget = func(opts session.DetectOptions) session.FocusTarget {
+		if opts.ActivateApp != "iTerm2" {
+			t.Fatalf("ActivateApp = %q, want config default", opts.ActivateApp)
+		}
+		return session.FocusTarget{ActivateApp: "com.googlecode.iterm2"}
+	}
+	t.Cleanup(func() { detectFocusTarget = oldDetectFocusTarget })
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	notifier := &recordingNotifier{}
+	code := ExecuteWithNotifier(
+		[]string{"run", "--", "/bin/sh", "-c", "printf ready"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		notifier,
+	)
+
+	if code != 0 {
+		t.Fatalf("code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+	assertNotificationCount(t, notifier, 2)
+	for _, notification := range notifier.notifications {
+		if !notification.Sound || notification.ActivateApp != "com.googlecode.iterm2" {
+			t.Fatalf("notification = %#v, want config sound/focus defaults", notification)
+		}
+	}
+}
+
+func TestExecuteConfigErrorPreventsCommand(t *testing.T) {
+	setConfigLoader(t, taskconfig.Config{}, errors.New("bad .tasklight.toml"))
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	notifier := &recordingNotifier{}
+
+	code := ExecuteWithNotifier(
+		[]string{"run", "--", "/bin/sh", "-c", "printf SHOULD_NOT_RUN"},
+		strings.NewReader(""),
+		&stdout,
+		&stderr,
+		notifier,
+	)
+
+	if code != 2 || stdout.Len() != 0 || !strings.Contains(stderr.String(), "configuration error: bad .tasklight.toml") {
+		t.Fatalf("code = %d, stdout = %q, stderr = %q; want early config error", code, stdout.String(), stderr.String())
+	}
+	assertNotificationCount(t, notifier, 0)
 }
 
 func TestExecuteRunSuccess(t *testing.T) {
@@ -236,7 +339,7 @@ func TestConciseOutputLine(t *testing.T) {
 
 func TestParseRunIdleDurations(t *testing.T) {
 	for _, value := range []string{"30s", "5m", "1h"} {
-		opts, command, help, err := parseRunArgs([]string{"--idle", value, "--", "echo"})
+		opts, command, help, err := parseRunArgs([]string{"--idle", value, "--", "echo"}, taskconfig.Run{})
 		if err != nil || help {
 			t.Fatalf("parseRunArgs(--idle %s) = help %v, err %v", value, help, err)
 		}
@@ -252,7 +355,7 @@ func TestParseRunIdleDurations(t *testing.T) {
 
 func TestParseRunRejectsInvalidIdle(t *testing.T) {
 	for _, value := range []string{"0s", "-1s", "later"} {
-		_, _, _, err := parseRunArgs([]string{"--idle", value, "--", "echo"})
+		_, _, _, err := parseRunArgs([]string{"--idle", value, "--", "echo"}, taskconfig.Run{})
 		if err == nil {
 			t.Fatalf("parseRunArgs(--idle %s) error = nil, want error", value)
 		}
@@ -508,6 +611,15 @@ func mustParseDuration(t *testing.T, value string) time.Duration {
 		t.Fatalf("ParseDuration(%q): %v", value, err)
 	}
 	return duration
+}
+
+func setConfigLoader(t *testing.T, configuration taskconfig.Config, err error) {
+	t.Helper()
+	oldLoadConfig := loadConfig
+	loadConfig = func() (taskconfig.Config, error) {
+		return configuration, err
+	}
+	t.Cleanup(func() { loadConfig = oldLoadConfig })
 }
 
 type recordingNotifier struct {

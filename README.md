@@ -64,11 +64,11 @@ Implemented:
 - best-effort app activation elsewhere
 - detailed click-to-focus diagnostics with `tasklight doctor --focus`
 - approval-gated npm provenance and GitHub release automation
+- optional global and project-local configuration defaults
 
 Planned:
 
 - deeper terminal/window focus support
-- config files
 
 ## Installation
 
@@ -204,6 +204,32 @@ tasklight run --name "Agent task" --idle 5m --match 'approve|waiting|failed' -- 
 tasklight notify --title "Deploy" --subtitle "✅ Task finished" --message "Updated production assets."
 ```
 
+## Configuration
+
+Tasklight optionally loads TOML configuration from these locations, in order:
+
+1. `$XDG_CONFIG_HOME/tasklight/config.toml`, or `~/.config/tasklight/config.toml` when `XDG_CONFIG_HOME` is unset
+2. `.tasklight.toml` in the current project directory
+3. Explicit CLI flags
+
+Later sources override only the settings they define. No configuration file is required.
+
+```toml
+[run]
+activate_app = "iTerm2"
+sound = false
+idle = "5m"
+match = "approve|waiting|failed"
+
+[notify]
+activate_app = "iTerm2"
+sound = true
+```
+
+`run.idle` uses Go duration syntax. `run.match` is a Go regular expression. Set either value to an empty string in `.tasklight.toml` to disable an inherited global default. Invalid TOML, unknown keys, invalid durations, and invalid regexps produce a path-specific error before the command or notification runs.
+
+CLI flags override configuration, including explicit boolean values such as `--sound=false`.
+
 ## Integrations
 
 Tasklight is intentionally a generic notification CLI. It owns command running, desktop notification providers, package distribution, and terminal/tmux focus behavior.
@@ -321,6 +347,7 @@ tasklight doctor [--focus]
 --activate-app string   App name or bundle ID to activate when clicking the notification
 --idle duration         Notify after this duration without stdout/stderr output
 --match regexp          Notify when an output line matches this Go regexp
+--sound                 Play the default notification sound
 -h, --help              Show help
 ```
 
@@ -391,7 +418,6 @@ Near-term:
 
 Later:
 
-- config file support
 - richer tmux integration
 - better Linux focus support
 - continue improving the native macOS notification helper and iTerm2/tmux focus path
