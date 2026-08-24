@@ -131,6 +131,8 @@ sudo dnf install libnotify
 sudo pacman -S libnotify
 ```
 
+On macOS, open **System Settings → Notifications** and enable **Tasklight** once. This is required after installing v0.2.1 because its cache-safe notification identity is new.
+
 Check your setup:
 
 ```bash

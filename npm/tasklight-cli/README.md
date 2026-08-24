@@ -64,6 +64,8 @@ Windows is not packaged yet.
 
 This npm package bundles a tiny native `Tasklight.app` notification helper for proper Tasklight notification identity, custom icon support, and reliable click behavior. The helper is ad hoc signed with the hardened runtime and verified during packaging; it is not represented as an Apple-notarized standalone application.
 
+After installing on macOS, open **System Settings → Notifications** and enable **Tasklight** once. This is required after installing v0.2.1 because its cache-safe notification identity is new. Run `tasklight doctor` afterward to confirm authorization.
+
 If the native helper is unavailable, Tasklight can use `terminal-notifier` as an optional fallback:
 
 ```bash
